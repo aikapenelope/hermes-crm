@@ -1,0 +1,28 @@
+{
+  "name": "hermes-crm-ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.1",
+    "@sveltejs/adapter-static": "3.0.10",
+    "@sveltejs/kit": "2.61.1",
+    "@tailwindcss/vite": "4.3.0",
+    "@types/node": "^25.9.1",
+    "svelte": "5.55.9",
+    "svelte-check": "4.4.8",
+    "tailwindcss": "4.3.0",
+    "typescript": "5.8.3",
+    "vite": "8.0.14"
+  },
+  "dependencies": {
+    "lucide-svelte": "1.0.1",
+    "pocketbase": "0.27.0"
+  }
+}
