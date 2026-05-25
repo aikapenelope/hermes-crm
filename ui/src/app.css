@@ -1,0 +1,24 @@
+/* Tailwind v4 — single import, zero config required */
+@import "tailwindcss";
+
+/* Custom CSS variables for the CRM design system */
+@layer base {
+  :root {
+    --sidebar-width: 240px;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-slate-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-600 rounded; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-500; }
+}

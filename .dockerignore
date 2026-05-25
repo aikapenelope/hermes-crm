@@ -1,0 +1,7 @@
+.git
+.gitignore
+*.md
+ui/node_modules
+ui/.svelte-kit
+ui/build
+pb_migrations/__snapshots__
