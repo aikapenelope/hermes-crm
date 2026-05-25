@@ -2,20 +2,23 @@
 	import { onMount } from 'svelte';
 	import pb from '$lib/pb';
 	import { toast } from '$lib/stores';
-	import { Package } from 'lucide-svelte';
+	import { Sheet, Modal, Btn, Badge, Skeleton, Empty } from '$lib/ui';
+	import ProductForm from '$lib/forms/ProductForm.svelte';
+	import { Package, Plus, Pencil, Trash2 } from 'lucide-svelte';
 	import type { ListResult } from 'pocketbase';
 
-	type Product = {
-		id: string; name: string; sku: string; type: string;
-		description: string; price: number; currency: string; active: boolean;
-	};
+	type Product = { id: string; name: string; sku: string; type: string; description: string; price: number; currency: string; active: boolean };
 
-	let result = $state<ListResult<Product> | null>(null);
-	let loading = $state(true);
-	let filterType = $state('');
-	let filterActive = $state('');
-	let page = $state(1);
-	const perPage = 20;
+	let result        = $state<ListResult<Product> | null>(null);
+	let loading       = $state(true);
+	let filterType    = $state('');
+	let filterActive  = $state('');
+	let page          = $state(1);
+	const perPage     = 20;
+	let sheetOpen     = $state(false);
+	let editingProduct = $state<Product | null>(null);
+	let deleteTarget  = $state<Product | null>(null);
+	let deleting      = $state(false);
 
 	async function fetchProducts() {
 		loading = true;
@@ -26,44 +29,51 @@
 			result = await pb.collection('products').getList<Product>(page, perPage, {
 				filter: filters.join(' && ') || undefined,
 				sort: 'name',
-				fields: 'id,name,sku,type,description,price,currency,active',
 			});
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Error al cargar productos');
-		} finally { loading = false; }
+		} catch (e: unknown) { toast.error('Error al cargar'); } finally { loading = false; }
 	}
 
 	onMount(fetchProducts);
 	$effect(() => { filterType; filterActive; page; fetchProducts(); });
 
-	const typeLabels: Record<string, string> = {
-		product: 'Producto', service: 'Servicio',
-		subscription: 'Suscripción', license: 'Licencia',
+	function handleSaved() { sheetOpen = false; fetchProducts(); }
+
+	async function confirmDelete() {
+		if (!deleteTarget) return;
+		deleting = true;
+		try {
+			await pb.collection('products').delete(deleteTarget.id);
+			toast.success('Producto eliminado');
+			deleteTarget = null;
+			fetchProducts();
+		} catch (e: unknown) { toast.error('Error al eliminar'); } finally { deleting = false; }
+	}
+
+	const typeLabel: Record<string, string> = {
+		product: 'Producto', service: 'Servicio', subscription: 'Suscripción', license: 'Licencia',
 	};
-	const currencySymbols: Record<string, string> = {
+	const currencySymbol: Record<string, string> = {
 		USD: '$', COP: 'COP$', EUR: '€', MXN: 'MX$', BRL: 'R$', ARS: 'AR$',
 	};
 </script>
 
 <svelte:head><title>Productos — Hermes CRM</title></svelte:head>
 
-<div class="flex-1 p-6">
+<div class="flex-1 p-5 md:p-6">
 	<div class="mb-5 flex items-center justify-between">
 		<div>
-			<h1 class="text-xl font-semibold text-slate-100">Productos & Servicios</h1>
-			<p class="text-sm text-slate-400">{result ? `${result.totalItems} items` : '…'}</p>
+			<h1>Productos & Servicios</h1>
+			<p class="mt-0.5 text-sm text-slate-400">{result ? `${result.totalItems} items` : '…'}</p>
 		</div>
-		<button
-			onclick={() => toast.info('Crear producto — próximamente')}
-			class="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
-		>
-			<Package class="h-4 w-4" /> Nuevo producto
-		</button>
+		<Btn variant="primary" onclick={() => { editingProduct = null; sheetOpen = true; }}>
+			{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}
+			Nuevo producto
+		</Btn>
 	</div>
 
 	<div class="mb-4 flex gap-3 flex-wrap">
 		<select bind:value={filterType}
-			class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
 			<option value="">Todos los tipos</option>
 			<option value="product">Producto</option>
 			<option value="service">Servicio</option>
@@ -71,61 +81,63 @@
 			<option value="license">Licencia</option>
 		</select>
 		<select bind:value={filterActive}
-			class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
 			<option value="">Activos e inactivos</option>
 			<option value="true">Solo activos</option>
 			<option value="false">Solo inactivos</option>
 		</select>
 	</div>
 
-	<div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+	<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
 		{#if loading && !result}
-			<div class="flex items-center gap-2 p-8 text-sm text-slate-400">
-				<div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-blue-500"></div>
-				Cargando…
-			</div>
+			<div class="p-5"><Skeleton rows={5} /></div>
 		{:else if result && result.items.length === 0}
-			<p class="p-8 text-center text-sm text-slate-500">Sin productos aún</p>
+			<Empty title="Sin productos" description="Añade tu catálogo de productos y servicios">
+				{#snippet icon()}<Package class="h-5 w-5" />{/snippet}
+				{#snippet action()}<Btn variant="primary" onclick={() => { editingProduct = null; sheetOpen = true; }}>
+					{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}Crear producto
+				</Btn>{/snippet}
+			</Empty>
 		{:else if result}
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="border-b border-slate-800">
-						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400">Nombre</th>
-						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden md:table-cell">SKU</th>
-						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400">Tipo</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400">Producto</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden md:table-cell">Tipo</th>
 						<th class="px-4 py-3 text-right text-xs font-medium text-slate-400">Precio</th>
 						<th class="px-4 py-3 text-center text-xs font-medium text-slate-400">Estado</th>
+						<th class="px-4 py-3 text-right text-xs font-medium text-slate-400">Acciones</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-800">
 					{#each result.items as p (p.id)}
-						<tr class="hover:bg-slate-800/40 transition-colors {!p.active ? 'opacity-50' : ''}">
+						<tr class="group hover:bg-slate-800/40 transition-colors {!p.active ? 'opacity-50' : ''}">
 							<td class="px-4 py-3">
-								<div>
-									<p class="font-medium text-slate-200">{p.name}</p>
-									{#if p.description}
-										<p class="text-xs text-slate-500 truncate max-w-xs">{p.description}</p>
-									{/if}
-								</div>
+								<p class="font-medium text-slate-200">{p.name}</p>
+								{#if p.sku}<p class="font-mono text-xs text-slate-500">{p.sku}</p>{/if}
 							</td>
-							<td class="px-4 py-3 text-slate-400 font-mono text-xs hidden md:table-cell">{p.sku || '—'}</td>
-							<td class="px-4 py-3">
-								<span class="rounded px-1.5 py-0.5 text-xs bg-slate-700 text-slate-300">
-									{typeLabels[p.type] ?? p.type}
-								</span>
+							<td class="px-4 py-3 hidden md:table-cell">
+								<Badge variant="slate">{typeLabel[p.type] ?? p.type}</Badge>
 							</td>
-							<td class="px-4 py-3 text-right font-medium text-emerald-400">
-								{#if p.price}
-									{currencySymbols[p.currency] ?? ''}{p.price.toLocaleString()}
-								{:else}
-									<span class="text-slate-600">—</span>
-								{/if}
+							<td class="px-4 py-3 text-right font-semibold text-emerald-400">
+								{p.price ? `${currencySymbol[p.currency] ?? ''}${p.price.toLocaleString()}` : '—'}
 							</td>
 							<td class="px-4 py-3 text-center">
-								<span class="rounded-full px-2 py-0.5 text-xs font-medium
-									{p.active ? 'bg-emerald-900/50 text-emerald-300' : 'bg-slate-700 text-slate-400'}">
+								<Badge variant={p.active ? 'green' : 'slate'}>
 									{p.active ? 'Activo' : 'Inactivo'}
-								</span>
+								</Badge>
+							</td>
+							<td class="px-4 py-3 text-right">
+								<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+									<button onclick={() => { editingProduct = p; sheetOpen = true; }}
+										class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-slate-200">
+										<Pencil class="h-3.5 w-3.5" />
+									</button>
+									<button onclick={() => { deleteTarget = p; }}
+										class="rounded-lg p-1.5 text-slate-400 hover:bg-red-900/40 hover:text-red-400">
+										<Trash2 class="h-3.5 w-3.5" />
+									</button>
+								</div>
 							</td>
 						</tr>
 					{/each}
@@ -135,13 +147,19 @@
 				<div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
 					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
-						<button onclick={() => { page = page - 1; }} disabled={page <= 1}
-							class="rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-40">← Anterior</button>
-						<button onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}
-							class="rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-40">Siguiente →</button>
+						<Btn variant="ghost" size="sm" onclick={() => { page = page - 1; }} disabled={page <= 1}>← Anterior</Btn>
+						<Btn variant="ghost" size="sm" onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}>Siguiente →</Btn>
 					</div>
 				</div>
 			{/if}
 		{/if}
 	</div>
 </div>
+
+<Sheet open={sheetOpen} title={editingProduct ? 'Editar producto' : 'Nuevo producto'} onclose={() => { sheetOpen = false; }}>
+	{#snippet children()}<ProductForm product={editingProduct} onSave={handleSaved} onClose={() => { sheetOpen = false; }} />{/snippet}
+</Sheet>
+
+<Modal open={!!deleteTarget} title="Eliminar producto" message="¿Eliminar '{deleteTarget?.name}'?"
+	confirmLabel="Eliminar" variant="danger" loading={deleting}
+	onconfirm={confirmDelete} oncancel={() => { deleteTarget = null; }} />

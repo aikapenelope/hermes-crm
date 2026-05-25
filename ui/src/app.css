@@ -1,24 +1,52 @@
-/* Tailwind v4 — single import, zero config required */
 @import "tailwindcss";
 
-/* Custom CSS variables for the CRM design system */
+/* ── Design tokens ────────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --sidebar-width: 240px;
+    --sidebar-w: 228px;
+    --radius: 0.625rem;
+    --transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  * {
-    box-sizing: border-box;
-  }
+  * { box-sizing: border-box; }
+
+  html { font-size: 15px; }
 
   body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
     @apply bg-slate-950 text-slate-100 antialiased;
-    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* Scrollbar styling */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-slate-900; }
-  ::-webkit-scrollbar-thumb { @apply bg-slate-600 rounded; }
+  /* ── Typography scale ───────────────────────────────────────────────────── */
+  h1 { @apply text-xl font-semibold tracking-tight text-slate-50; }
+  h2 { @apply text-base font-semibold text-slate-100; }
+  h3 { @apply text-sm font-medium text-slate-200; }
+
+  /* ── Focus ring ─────────────────────────────────────────────────────────── */
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-950;
+  }
+
+  /* ── Scrollbar ──────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar          { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track    { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb    { @apply rounded-full bg-slate-700; }
   ::-webkit-scrollbar-thumb:hover { @apply bg-slate-500; }
+
+  /* ── Input baseline ─────────────────────────────────────────────────────── */
+  input, textarea, select {
+    @apply bg-slate-900 text-slate-100;
+    accent-color: theme(colors.blue.500);
+  }
+
+  /* ── Selection ──────────────────────────────────────────────────────────── */
+  ::selection { @apply bg-blue-600/40; }
+}
+
+/* ── Utility: animated skeleton pulse ────────────────────────────────────── */
+@layer utilities {
+  .skeleton {
+    @apply animate-pulse rounded bg-slate-800;
+  }
 }

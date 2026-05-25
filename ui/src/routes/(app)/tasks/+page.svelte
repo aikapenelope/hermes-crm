@@ -2,7 +2,9 @@
 	import { onMount } from 'svelte';
 	import pb from '$lib/pb';
 	import { toast } from '$lib/stores';
-	import { CheckSquare, Check } from 'lucide-svelte';
+	import { Sheet, Modal, Btn, Badge, Skeleton, Empty } from '$lib/ui';
+	import TaskForm from '$lib/forms/TaskForm.svelte';
+	import { CheckSquare, Plus, Check, Pencil, Trash2 } from 'lucide-svelte';
 	import type { ListResult } from 'pocketbase';
 
 	type Task = {
@@ -11,80 +13,101 @@
 		expand?: { contact?: { id: string; name: string } };
 	};
 
-	let result = $state<ListResult<Task> | null>(null);
-	let loading = $state(true);
-	let filterStatus = $state('');
+	let result      = $state<ListResult<Task> | null>(null);
+	let loading     = $state(true);
+	let filterStatus   = $state('');
 	let filterPriority = $state('');
-	let page = $state(1);
-	const perPage = 25;
+	let page        = $state(1);
+	const perPage   = 25;
+
+	// Sheet
+	let sheetOpen  = $state(false);
+	let editingTask = $state<Task | null>(null);
+
+	// Delete
+	let deleteTarget = $state<Task | null>(null);
+	let deleting     = $state(false);
 
 	async function fetchTasks() {
 		loading = true;
 		try {
 			const filters: string[] = [];
-			if (filterStatus) filters.push(`status = '${filterStatus}'`);
+			if (filterStatus)   filters.push(`status = '${filterStatus}'`);
 			if (filterPriority) filters.push(`priority = '${filterPriority}'`);
 			result = await pb.collection('tasks').getList<Task>(page, perPage, {
 				filter: filters.join(' && ') || undefined,
 				sort: 'due_date,-created',
 				expand: 'contact',
-				fields: 'id,title,type,status,priority,due_date,description,expand',
 			});
 		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Error al cargar tareas');
+			toast.error(e instanceof Error ? e.message : 'Error');
 		} finally { loading = false; }
 	}
 
 	onMount(fetchTasks);
 	$effect(() => { filterStatus; filterPriority; page; fetchTasks(); });
 
-	async function markDone(task: Task) {
+	function openCreate() { editingTask = null; sheetOpen = true; }
+	function openEdit(t: Task) { editingTask = t; sheetOpen = true; }
+	function handleSaved() { sheetOpen = false; fetchTasks(); }
+
+	async function markDone(task: Task, e: MouseEvent) {
+		e.stopPropagation();
+		const newStatus = task.status === 'done' ? 'todo' : 'done';
 		try {
-			await pb.collection('tasks').update(task.id, { status: 'done' });
-			result = result ? {
-				...result,
-				items: result.items.map(t => t.id === task.id ? { ...t, status: 'done' } : t),
-			} : null;
-			toast.success('Tarea completada');
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Error');
-		}
+			await pb.collection('tasks').update(task.id, { status: newStatus });
+			result = result
+				? { ...result, items: result.items.map(t => t.id === task.id ? { ...t, status: newStatus } : t) }
+				: null;
+			if (newStatus === 'done') toast.success('Tarea completada');
+		} catch (e: unknown) { toast.error('Error'); }
 	}
 
-	const priorityColors: Record<string, string> = {
-		low: 'text-slate-400', medium: 'text-blue-400',
-		high: 'text-amber-400', urgent: 'text-rose-400',
+	async function confirmDelete() {
+		if (!deleteTarget) return;
+		deleting = true;
+		try {
+			await pb.collection('tasks').delete(deleteTarget.id);
+			toast.success('Tarea eliminada');
+			deleteTarget = null;
+			fetchTasks();
+		} catch (e: unknown) {
+			toast.error(e instanceof Error ? e.message : 'Error');
+		} finally { deleting = false; }
+	}
+
+	const priorityBadge: Record<string, 'slate' | 'blue' | 'amber' | 'red'> = {
+		low: 'slate', medium: 'blue', high: 'amber', urgent: 'red',
 	};
-	const typeLabels: Record<string, string> = {
-		call: 'Llamada', email: 'Email', meeting: 'Reunión',
-		demo: 'Demo', task: 'Tarea', follow_up: 'Seguimiento',
+	const priorityLabel: Record<string, string> = {
+		low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Urgente',
+	};
+	const typeLabel: Record<string, string> = {
+		call: '📞', email: '📧', meeting: '👥', demo: '💻', task: '✓', follow_up: '🔄',
 	};
 
-	function isOverdue(dueDate: string, status: string): boolean {
-		if (!dueDate || status === 'done' || status === 'cancelled') return false;
-		return new Date(dueDate) < new Date();
+	function isOverdue(t: Task) {
+		return t.due_date && !['done','cancelled'].includes(t.status) && new Date(t.due_date) < new Date();
 	}
 </script>
 
 <svelte:head><title>Tareas — Hermes CRM</title></svelte:head>
 
-<div class="flex-1 p-6">
+<div class="flex-1 p-5 md:p-6">
 	<div class="mb-5 flex items-center justify-between">
 		<div>
-			<h1 class="text-xl font-semibold text-slate-100">Tareas</h1>
-			<p class="text-sm text-slate-400">{result ? `${result.totalItems} tareas` : '…'}</p>
+			<h1>Tareas</h1>
+			<p class="mt-0.5 text-sm text-slate-400">{result ? `${result.totalItems} tareas` : '…'}</p>
 		</div>
-		<button
-			onclick={() => toast.info('Crear tarea — próximamente')}
-			class="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
-		>
-			<CheckSquare class="h-4 w-4" /> Nueva tarea
-		</button>
+		<Btn variant="primary" onclick={openCreate}>
+			{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}
+			Nueva tarea
+		</Btn>
 	</div>
 
 	<div class="mb-4 flex gap-3 flex-wrap">
 		<select bind:value={filterStatus}
-			class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
 			<option value="">Todos los estados</option>
 			<option value="todo">Pendiente</option>
 			<option value="in_progress">En progreso</option>
@@ -92,7 +115,7 @@
 			<option value="cancelled">Canceladas</option>
 		</select>
 		<select bind:value={filterPriority}
-			class="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
 			<option value="">Todas las prioridades</option>
 			<option value="urgent">Urgente</option>
 			<option value="high">Alta</option>
@@ -101,56 +124,91 @@
 		</select>
 	</div>
 
-	<div class="space-y-1.5">
-		{#if loading && !result}
-			<div class="flex items-center gap-2 py-4 text-sm text-slate-400">
-				<div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-blue-500"></div>
-				Cargando…
-			</div>
-		{:else if result && result.items.length === 0}
-			<div class="rounded-xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-500">Sin tareas</div>
-		{:else if result}
+	{#if loading && !result}
+		<Skeleton rows={8} />
+	{:else if result && result.items.length === 0}
+		<Empty
+			title="Sin tareas"
+			description={filterStatus || filterPriority ? 'Prueba con otro filtro' : 'Crea tu primera tarea para organizar tu trabajo'}
+		>
+			{#snippet icon()}<CheckSquare class="h-5 w-5" />{/snippet}
+			{#snippet action()}
+				{#if !filterStatus && !filterPriority}
+					<Btn variant="primary" onclick={openCreate}>
+						{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}
+						Crear primera tarea
+					</Btn>
+				{/if}
+			{/snippet}
+		</Empty>
+	{:else if result}
+		<div class="space-y-1.5">
 			{#each result.items as task (task.id)}
-				<div class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 hover:border-slate-700 transition-colors
-					{task.status === 'done' || task.status === 'cancelled' ? 'opacity-60' : ''}">
-					<!-- Mark done button -->
+				<div
+					class="group flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3
+						transition-colors hover:border-slate-700
+						{task.status === 'done' || task.status === 'cancelled' ? 'opacity-60' : ''}"
+				>
+					<!-- Checkbox -->
 					<button
-						onclick={() => markDone(task)}
-						disabled={task.status === 'done'}
-						class="flex h-5 w-5 shrink-0 items-center justify-center rounded border
-							{task.status === 'done' ? 'border-emerald-600 bg-emerald-900/50 text-emerald-400' : 'border-slate-600 hover:border-emerald-500 hover:text-emerald-400 text-slate-600'}
-							transition-colors disabled:cursor-default"
+						onclick={(e) => markDone(task, e)}
+						class="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all
+							{task.status === 'done'
+							? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+							: 'border-slate-600 hover:border-emerald-500'}"
 					>
-						{#if task.status === 'done'}<Check class="h-3 w-3" />{/if}
+						{#if task.status === 'done'}
+							<Check class="h-3 w-3" />
+						{/if}
 					</button>
 
-					<div class="flex-1 min-w-0">
+					<!-- Task info -->
+					<button onclick={() => openEdit(task)} class="flex-1 min-w-0 text-left">
 						<div class="flex items-center gap-2 flex-wrap">
+							{#if task.type}
+								<span class="text-sm" title={task.type}>{typeLabel[task.type] ?? ''}</span>
+							{/if}
 							<span class="text-sm font-medium {task.status === 'done' ? 'line-through text-slate-500' : 'text-slate-200'}">
 								{task.title}
 							</span>
-							{#if task.type}
-								<span class="text-xs text-slate-500">{typeLabels[task.type] ?? task.type}</span>
-							{/if}
 						</div>
 						{#if task.expand?.contact}
-							<a href="/contacts/{task.expand.contact.id}" class="text-xs text-blue-400 hover:text-blue-300">
+							<a
+								href="/contacts/{task.expand.contact.id}"
+								onclick={(e) => e.stopPropagation()}
+								class="text-xs text-blue-400 hover:text-blue-300"
+							>
 								{task.expand.contact.name}
 							</a>
 						{/if}
-					</div>
+					</button>
 
-					<div class="flex items-center gap-3 shrink-0">
+					<!-- Meta + actions -->
+					<div class="flex shrink-0 items-center gap-2">
 						{#if task.priority}
-							<span class="text-xs font-medium {priorityColors[task.priority] ?? 'text-slate-400'}">
-								{task.priority}
-							</span>
+							<Badge variant={priorityBadge[task.priority] ?? 'slate'} size="sm">
+								{priorityLabel[task.priority] ?? task.priority}
+							</Badge>
 						{/if}
 						{#if task.due_date}
-							<span class="text-xs {isOverdue(task.due_date, task.status) ? 'text-rose-400 font-medium' : 'text-slate-500'}">
+							<span class="text-xs {isOverdue(task) ? 'font-medium text-rose-400' : 'text-slate-500'}">
 								{task.due_date.slice(0, 10)}
 							</span>
 						{/if}
+						<div class="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+							<button
+								onclick={() => openEdit(task)}
+								class="rounded p-1 text-slate-500 hover:bg-slate-700 hover:text-slate-200"
+							>
+								<Pencil class="h-3.5 w-3.5" />
+							</button>
+							<button
+								onclick={() => { deleteTarget = task; }}
+								class="rounded p-1 text-slate-500 hover:bg-red-900/40 hover:text-red-400"
+							>
+								<Trash2 class="h-3.5 w-3.5" />
+							</button>
+						</div>
 					</div>
 				</div>
 			{/each}
@@ -159,13 +217,37 @@
 				<div class="flex items-center justify-between pt-2">
 					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
-						<button onclick={() => { page = page - 1; }} disabled={page <= 1}
-							class="rounded px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-40">← Anterior</button>
-						<button onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}
-							class="rounded px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-40">Siguiente →</button>
+						<Btn variant="ghost" size="sm" onclick={() => { page = page - 1; }} disabled={page <= 1}>← Anterior</Btn>
+						<Btn variant="ghost" size="sm" onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}>Siguiente →</Btn>
 					</div>
 				</div>
 			{/if}
-		{/if}
-	</div>
+		</div>
+	{/if}
 </div>
+
+<Sheet
+	open={sheetOpen}
+	title={editingTask ? 'Editar tarea' : 'Nueva tarea'}
+	description={editingTask ? 'Modifica los detalles de la tarea' : 'Crea una nueva tarea o recordatorio'}
+	onclose={() => { sheetOpen = false; }}
+>
+	{#snippet children()}
+		<TaskForm
+			task={editingTask}
+			onSave={handleSaved}
+			onClose={() => { sheetOpen = false; }}
+		/>
+	{/snippet}
+</Sheet>
+
+<Modal
+	open={!!deleteTarget}
+	title="Eliminar tarea"
+	message="¿Eliminar '{deleteTarget?.title}'?"
+	confirmLabel="Eliminar"
+	variant="danger"
+	loading={deleting}
+	onconfirm={confirmDelete}
+	oncancel={() => { deleteTarget = null; }}
+/>
