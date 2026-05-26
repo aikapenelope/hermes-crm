@@ -85,8 +85,8 @@
 
 	{#each segments as seg}
 		{@const data = segData[seg.id]}
-		<div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
-			<div class="flex items-start gap-3 border-b border-slate-800 px-4 py-3">
+		<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
+			<div class="flex items-start gap-3 border-b border-[#1a1a1a] px-4 py-3">
 				<BarChart2 class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
 				<div>
 					<h2 class="text-sm font-semibold text-slate-200">{seg.label}</h2>
@@ -110,7 +110,7 @@
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-b border-slate-800/50">
+							<tr class="border-b border-[#1a1a1a]/50">
 								{#each seg.columns as col}
 									<th class="px-4 py-2 text-left text-xs font-medium text-slate-500 capitalize">
 										{col.replace(/_/g, ' ')}
@@ -118,7 +118,7 @@
 								{/each}
 							</tr>
 						</thead>
-						<tbody class="divide-y divide-slate-800/40">
+						<tbody class="divide-y divide-[#1a1a1a]/40">
 							{#each data.rows as row (row.id)}
 								<tr class="hover:bg-slate-800/20 transition-colors">
 									{#each seg.columns as col}

@@ -111,7 +111,7 @@
 		negotiation: 'Negociación', won: 'Ganado', lost: 'Perdido',
 	};
 	const priorityColor: Record<string, string> = {
-		low: 'text-slate-400', medium: 'text-blue-400',
+		low: 'text-slate-400', medium: 'text-white',
 		high: 'text-amber-400', urgent: 'text-rose-400',
 	};
 
@@ -149,9 +149,9 @@
 		<div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
 			<!-- ── Left column: info + deals + tasks ─────────────────── -->
 			<div class="space-y-4">
-				<div class="rounded-xl border border-slate-800 bg-slate-900 p-5">
+				<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] p-5">
 					<div class="mb-4 flex items-center gap-3">
-						<div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600/50 to-violet-600/50 text-lg font-bold text-slate-200">
+						<div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#1a1a1a] to-[#111] text-lg font-bold text-slate-200">
 							{String(contact.name ?? contact.email ?? '?')[0].toUpperCase()}
 						</div>
 						<div>
@@ -167,7 +167,7 @@
 						{#if contact.email}
 							<li class="flex items-center gap-2.5 text-slate-300">
 								<Mail class="h-4 w-4 shrink-0 text-slate-500" />
-								<a href="mailto:{contact.email}" class="hover:text-blue-400 truncate">{contact.email as string}</a>
+								<a href="mailto:{contact.email}" class="hover:text-white truncate">{contact.email as string}</a>
 							</li>
 						{/if}
 						{#if contact.phone}
@@ -179,7 +179,7 @@
 						{#if contact.linkedin}
 							<li class="flex items-center gap-2.5 text-slate-300">
 								<Link class="h-4 w-4 shrink-0 text-slate-500" />
-								<a href={contact.linkedin as string} target="_blank" class="hover:text-blue-400 truncate">LinkedIn</a>
+								<a href={contact.linkedin as string} target="_blank" class="hover:text-white truncate">LinkedIn</a>
 							</li>
 						{/if}
 					</ul>
@@ -190,15 +190,15 @@
 					{/if}
 				</div>
 
-				<div class="rounded-xl border border-slate-800 bg-slate-900">
-					<div class="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+				<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
+					<div class="flex items-center justify-between border-b border-[#1a1a1a] px-4 py-3">
 						<h2 class="text-sm font-semibold text-slate-200">Negocios ({deals.length})</h2>
-						<a href="/deals" class="text-xs text-blue-400 hover:text-blue-300">Ver todos</a>
+						<a href="/deals" class="text-[9px] tracking-widest text-[#555] uppercase hover:text-white transition-colors">VER TODOS</a>
 					</div>
 					{#if deals.length === 0}
 						<p class="px-4 py-4 text-xs text-slate-500">Sin negocios asociados</p>
 					{:else}
-						<ul class="divide-y divide-slate-800">
+						<ul class="divide-y divide-[#1a1a1a]">
 							{#each deals as d (d.id)}
 								<li class="flex items-center justify-between gap-2 px-4 py-2.5">
 									<span class="truncate text-sm text-slate-200">{d.title}</span>
@@ -216,14 +216,14 @@
 					{/if}
 				</div>
 
-				<div class="rounded-xl border border-slate-800 bg-slate-900">
-					<h2 class="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-200">
+				<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
+					<h2 class="border-b border-[#1a1a1a] px-4 py-3 text-sm font-semibold text-slate-200">
 						Tareas pendientes ({tasks.length})
 					</h2>
 					{#if tasks.length === 0}
 						<p class="px-4 py-4 text-xs text-slate-500">Sin tareas</p>
 					{:else}
-						<ul class="divide-y divide-slate-800">
+						<ul class="divide-y divide-[#1a1a1a]">
 							{#each tasks as t (t.id)}
 								<li class="flex items-center gap-2 px-4 py-2.5">
 									<span class="h-1.5 w-1.5 shrink-0 rounded-full {priorityColor[t.priority] ?? 'bg-slate-500'} bg-current"></span>
@@ -240,17 +240,17 @@
 
 			<!-- ── Right column: notes ────────────────────────────────── -->
 			<div class="lg:col-span-2">
-				<div class="rounded-xl border border-slate-800 bg-slate-900">
-					<h2 class="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-200">
+				<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
+					<h2 class="border-b border-[#1a1a1a] px-4 py-3 text-sm font-semibold text-slate-200">
 						Notas ({notes.length})
 					</h2>
-					<div class="flex gap-2 border-b border-slate-800 p-3">
+					<div class="flex gap-2 border-b border-[#1a1a1a] p-3">
 						<textarea
 							bind:value={noteContent}
 							placeholder="Añade una nota sobre este contacto…"
 							rows={2}
-							class="flex-1 resize-none rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2
-								text-sm text-slate-100 placeholder-slate-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+							class="flex-1 resize-none rounded-lg border border-slate-700 bg-[#0d0d0d] px-3 py-2
+								text-sm text-white placeholder-[#444] outline-none focus:border-white focus:ring-0"
 							onkeydown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote(); }}
 						></textarea>
 						<Btn variant="primary" size="sm" loading={savingNote} onclick={addNote} disabled={!noteContent.trim()}>
@@ -261,7 +261,7 @@
 					{#if notes.length === 0}
 						<p class="px-4 py-4 text-xs text-slate-500">Sin notas — añade contexto sobre este contacto</p>
 					{:else}
-						<ul class="divide-y divide-slate-800 max-h-[32rem] overflow-y-auto">
+						<ul class="divide-y divide-[#1a1a1a] max-h-[32rem] overflow-y-auto">
 							{#each notes as note (note.id)}
 								<li class="group flex items-start gap-2 px-4 py-3">
 									<p class="flex-1 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{note.content}</p>

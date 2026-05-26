@@ -63,7 +63,7 @@ mcp_servers:
     args: ["-y", "gaspechak-pocketbase-mcp@2.0.1"]
     env:
       PB_URL: "http://pb-{tenant_code}:8090"   # Docker DNS — replace {tenant_code}
-      PB_EMAIL: "hermes@crm.internal"           # ⚠️ must be valid email (no hermes@internal)
+      PB_EMAIL: "hermes@internal"               # standardized superuser email
       PB_PASSWORD: "${PB_HERMES_PASSWORD}"      # injected from tenant .env
     timeout: 60          # per-tool timeout in seconds
     connect_timeout: 30  # initial connection timeout
@@ -129,57 +129,10 @@ The superuser credentials (`PB_EMAIL` / `PB_PASSWORD`) are:
 - The PocketBase port 8090 is NOT published to the host; it is only reachable via
   the `tenant-t001-net` Docker bridge network
 
-Using a standardized email (`hermes@crm.internal`) across all tenants is safe because:
+Using a standardized email (`hermes@internal`) across all tenants is safe because:
 1. PocketBase is isolated per-tenant (separate container, separate SQLite database)
 2. The MCP connection never leaves the Docker network
 3. Even if credentials were compromised, the attacker would need Docker network access
-
----
-
-## Known issues & workarounds
-
-### `pb_record_list` returns 400 — "Something went wrong"
-
-**Root cause:** PocketBase v0.22+ no longer adds `created`/`updated` as automatic
-system columns to user-created collections. Migrations 1–4 never declared them
-explicitly. Without those SQLite columns, any `sort=-created` query (which
-`gaspechak-pocketbase-mcp` issues by default) fails at the database level.
-
-**Status:** Fixed in migration 5 (`5_add_autodate_fields.js`).
-
-If you deployed before migration 5 was available (fresh install from an older
-image), run `docker compose restart crm` — migration 5 applies automatically.
-
-For existing deployments that already have data, migration 5 is safe to apply:
-it only adds missing columns and is fully idempotent.
-
----
-
-### gaspechak-pocketbase-mcp gets 403 when Hermes is in Docker
-
-**Root cause:** `PB_ADMIN_IPS` restricts both the admin panel **and** the superuser
-auth API. When Hermes runs as a Docker container, its requests arrive from the
-Docker bridge network (`172.17.x.x`), not from `127.0.0.1`. If `172.16.0.0/12`
-is not in `PB_ADMIN_IPS`, every `gaspechak-pocketbase-mcp` auth attempt returns
-`HTTP 403 You are not allowed to perform this request`.
-
-**Status:** Fixed — default `PB_ADMIN_IPS` now includes `172.16.0.0/12`.
-See `.env.example` for the recommended value per deployment scenario.
-
----
-
-### `pb_schema` and `pb_health` return "Invalid structured content"
-
-**Root cause:** `gaspechak-pocketbase-mcp@2.0.1` uses MCP TypeScript SDK v1.29,
-which returns structured content objects. Hermes v0.14.x Python MCP SDK v1.26
-validates tool outputs with `additionalProperties: False` and rejects any
-response containing extra JSON fields.
-
-**Impact:** Only `pb_schema` and `pb_health` tools fail. All CRUD operations
-(`pb_record_list`, `pb_record_mutate`, `pb_record_get`) work correctly.
-
-**Workaround:** No action needed for core CRM usage. Monitor for a Hermes SDK
-update that relaxes the structured content validation.
 
 ---
 

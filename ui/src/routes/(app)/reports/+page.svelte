@@ -87,7 +87,7 @@
 	<div class="mb-4">
 		<select
 			bind:value={filterType}
-			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500"
+			class="rounded-lg border border-slate-700 bg-[#0d0d0d] px-3 py-2 text-sm text-slate-300 outline-none focus:border-white"
 		>
 			<option value="">Todos los tipos</option>
 			<option value="cron">Cron jobs</option>
@@ -113,12 +113,12 @@
 		<div class="space-y-3">
 			{#each result.items as report (report.id)}
 				{@const isExpanded = expandedId === report.id}
-				<div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+				<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a] overflow-hidden">
 					<!-- Header row -->
 					<button
 						onclick={() => { expandedId = isExpanded ? null : report.id; }}
 						class="flex w-full items-center gap-3 px-4 py-3 text-left
-							hover:bg-slate-800/40 transition-colors"
+							hover:bg-[#111] transition-colors"
 					>
 						<!-- Status dot -->
 						<div class="h-2 w-2 shrink-0 rounded-full {statusDot[report.status] ?? 'bg-slate-500'}"></div>
@@ -145,7 +145,7 @@
 
 					<!-- Expandable content -->
 					{#if isExpanded && report.content}
-						<div class="border-t border-slate-800 px-4 py-4">
+						<div class="border-t border-[#1a1a1a] px-4 py-4">
 							<p class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
 								{report.content}
 							</p>

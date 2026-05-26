@@ -5,7 +5,7 @@
 	import { sanitizeSearch } from '$lib/utils';
 	import { Sheet, Modal, Btn, Badge, Skeleton, Empty } from '$lib/ui';
 	import ContactForm from '$lib/forms/ContactForm.svelte';
-	import { UserPlus, Search, Pencil, Trash2, Users } from 'lucide-svelte';
+	import { UserPlus, Search, Pencil, Trash2, Users, Upload } from 'lucide-svelte';
 	import type { ListResult } from 'pocketbase';
 
 	type Contact = {
@@ -103,10 +103,18 @@
 				{result ? `${result.totalItems.toLocaleString()} contactos` : '…'}
 			</p>
 		</div>
-		<Btn variant="primary" onclick={openCreate}>
-			{#snippet icon()}<UserPlus class="h-4 w-4" />{/snippet}
-			Nuevo contacto
-		</Btn>
+		<div class="flex items-center gap-2">
+			<a href="/contacts/import">
+				<Btn variant="outline">
+					{#snippet icon()}<Upload class="h-3.5 w-3.5" />{/snippet}
+					Importar CSV
+				</Btn>
+			</a>
+			<Btn variant="primary" onclick={openCreate}>
+				{#snippet icon()}<UserPlus class="h-3.5 w-3.5" />{/snippet}
+				Nuevo
+			</Btn>
+		</div>
 	</div>
 
 	<!-- Filters -->
@@ -118,13 +126,13 @@
 				placeholder="Buscar por nombre, email o teléfono…"
 				bind:value={search}
 				oninput={onSearchInput}
-				class="w-full rounded-lg border border-slate-700 bg-slate-800/60 py-2 pl-9 pr-3 text-sm
-					text-slate-100 placeholder-slate-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+				class="w-full rounded-lg border border-slate-700 bg-[#0d0d0d] py-2 pl-9 pr-3 text-sm
+					text-white placeholder-[#444] outline-none focus:border-white focus:ring-0"
 			/>
 		</div>
 		<select
 			bind:value={filterStatus}
-			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500"
+			class="rounded-lg border border-slate-700 bg-[#0d0d0d] px-3 py-2 text-sm text-slate-300 outline-none focus:border-white"
 		>
 			<option value="">Todos los estados</option>
 			<option value="lead">Lead</option>
@@ -136,7 +144,7 @@
 	</div>
 
 	<!-- Table / Skeleton / Empty -->
-	<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+	<div class="overflow-hidden rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
 		{#if loading && !result}
 			<div class="p-5"><Skeleton rows={6} /></div>
 		{:else if result && result.items.length === 0}
@@ -157,7 +165,7 @@
 		{:else if result}
 			<table class="w-full text-sm">
 				<thead>
-					<tr class="border-b border-slate-800">
+					<tr class="border-b border-[#1a1a1a]">
 						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400">Nombre</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden sm:table-cell">Email</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden md:table-cell">Teléfono</th>
@@ -166,15 +174,15 @@
 						<th class="px-4 py-3 text-right text-xs font-medium text-slate-400">Acciones</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-slate-800">
+				<tbody class="divide-y divide-[#1a1a1a]">
 					{#each result.items as c (c.id)}
-						<tr class="group hover:bg-slate-800/40 transition-colors">
+						<tr class="group hover:bg-[#111] transition-colors">
 							<td class="px-4 py-3">
-								<a href="/contacts/{c.id}" class="flex items-center gap-3 hover:text-blue-400">
-									<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600/40 to-violet-600/40 text-xs font-semibold text-slate-200">
+								<a href="/contacts/{c.id}" class="flex items-center gap-3 hover:text-white">
+									<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1a1a1a] to-[#111] text-xs font-semibold text-slate-200">
 										{(c.name || c.email || '?')[0].toUpperCase()}
 									</div>
-									<span class="font-medium text-slate-200 group-hover:text-blue-400 transition-colors">
+									<span class="font-medium text-slate-200 group-hover:text-white transition-colors">
 										{c.name || '—'}
 									</span>
 								</a>
@@ -218,7 +226,7 @@
 
 			<!-- Pagination -->
 			{#if result.totalPages > 1}
-				<div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
+				<div class="flex items-center justify-between border-t border-[#1a1a1a] px-4 py-3">
 					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
 						<Btn variant="ghost" size="sm" onclick={() => { page = page - 1; }} disabled={page <= 1}>

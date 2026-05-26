@@ -7,24 +7,25 @@
 
 	let { variant = 'slate', size = 'sm', children }: Props = $props();
 
+	// All variants tuned for dark #070707 background — white/bright for max contrast
 	const styles: Record<string, string> = {
-		slate:  'bg-slate-800 text-slate-300 ring-slate-700/50',
-		blue:   'bg-blue-900/50 text-blue-300 ring-blue-700/30',
-		green:  'bg-emerald-900/50 text-emerald-300 ring-emerald-700/30',
-		amber:  'bg-amber-900/50 text-amber-300 ring-amber-700/30',
-		red:    'bg-red-900/50 text-red-300 ring-red-700/30',
-		orange: 'bg-orange-900/50 text-orange-300 ring-orange-700/30',
-		violet: 'bg-violet-900/50 text-violet-300 ring-violet-700/30',
+		slate:  'border border-[#333] text-[#888]',
+		blue:   'border border-white text-white',        // was blue-900/50 — now white
+		green:  'border border-emerald-500/60 text-emerald-400',
+		amber:  'border border-amber-500/60 text-amber-400',
+		red:    'border border-red-500/60 text-red-400',
+		orange: 'border border-orange-500/60 text-orange-400',
+		violet: 'border border-violet-500/60 text-violet-400',
 	};
 
 	const sizes: Record<string, string> = {
-		sm: 'px-2 py-0.5 text-xs',
-		md: 'px-2.5 py-1 text-sm',
+		sm: 'px-2 py-0.5 text-[9px] tracking-widest',
+		md: 'px-2.5 py-1 text-[10px] tracking-widest',
 	};
 </script>
 
 <span
-	class="inline-flex items-center rounded-full font-medium ring-1 ring-inset
+	class="inline-flex items-center uppercase font-medium
 		{styles[variant]} {sizes[size]}"
 >
 	{@render children()}

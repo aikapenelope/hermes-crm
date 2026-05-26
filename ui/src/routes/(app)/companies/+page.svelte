@@ -78,11 +78,11 @@
 	<div class="relative mb-4">
 		<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
 		<input type="search" placeholder="Buscar empresas…" bind:value={search} oninput={onSearchInput}
-			class="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-800/60 py-2 pl-9 pr-3 text-sm
-				text-slate-100 placeholder-slate-500 outline-none focus:border-blue-500" />
+			class="w-full max-w-sm rounded-lg border border-slate-700 bg-[#0d0d0d] py-2 pl-9 pr-3 text-sm
+				text-white placeholder-[#444] outline-none focus:border-white" />
 	</div>
 
-	<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+	<div class="overflow-hidden rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
 		{#if loading && !result}
 			<div class="p-5"><Skeleton rows={5} /></div>
 		{:else if result && result.items.length === 0}
@@ -95,19 +95,19 @@
 		{:else if result}
 			<table class="w-full text-sm">
 				<thead>
-					<tr class="border-b border-slate-800">
+					<tr class="border-b border-[#1a1a1a]">
 						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400">Empresa</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden md:table-cell">Industria</th>
 						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden lg:table-cell">Ubicación</th>
 						<th class="px-4 py-3 text-right text-xs font-medium text-slate-400">Acciones</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-slate-800">
+				<tbody class="divide-y divide-[#1a1a1a]">
 					{#each result.items as c (c.id)}
-						<tr class="group hover:bg-slate-800/40 transition-colors">
+						<tr class="group hover:bg-[#111] transition-colors">
 							<td class="px-4 py-3">
 								<div class="flex items-center gap-2.5">
-									<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600/40 to-blue-600/40 text-xs font-bold text-slate-200">
+									<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#1a1a1a] to-[#111] text-xs font-bold text-slate-200">
 										{(c.name || '?')[0].toUpperCase()}
 									</div>
 									<div>
@@ -121,7 +121,7 @@
 							<td class="px-4 py-3 text-right">
 								<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 									<button onclick={() => { editingCompany = c; sheetOpen = true; }}
-										class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-slate-200">
+										class="rounded-lg p-1.5 text-[#555] hover:bg-[#111] hover:text-white">
 										<Pencil class="h-3.5 w-3.5" />
 									</button>
 									<button onclick={() => { deleteTarget = c; }}
@@ -135,7 +135,7 @@
 				</tbody>
 			</table>
 			{#if result.totalPages > 1}
-				<div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
+				<div class="flex items-center justify-between border-t border-[#1a1a1a] px-4 py-3">
 					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
 						<Btn variant="ghost" size="sm" onclick={() => { page = page - 1; }} disabled={page <= 1}>← Anterior</Btn>
