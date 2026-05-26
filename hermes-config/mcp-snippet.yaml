@@ -1,0 +1,45 @@
+# =============================================================================
+# Hermes CRM — MCP server configuration snippet
+#
+# Copy this block into the tenant's config.yaml:
+#   /var/lib/martes/tenants/{code}/config.yaml
+#
+# Replace {tenant_code} with the actual code (e.g. t001, t002).
+#
+# Required .env variable in /var/lib/martes/tenants/{code}/.env:
+#   PB_HERMES_PASSWORD=<openssl rand -hex 32>
+#
+# PocketBase must be running as a sidecar container named pb-{tenant_code}
+# on the same Docker bridge network as the Hermes container.
+#
+# Package: gaspechak-pocketbase-mcp@2.0.1 (May 2026)
+#   npm: https://www.npmjs.com/package/gaspechak-pocketbase-mcp
+#   16 tools: schema, CRUD, backup, logs, settings, rules_test
+#   Token-efficient: perPage=10, skipTotal=true, field excerpts 200 chars
+#   API rules/filter docs exposed as MCP Resources (not tool descriptions)
+# =============================================================================
+
+mcp_servers:
+  crm:
+    command: npx
+    args: ["-y", "gaspechak-pocketbase-mcp@2.0.1"]
+    env:
+      # Docker DNS — PocketBase sidecar must be named pb-{tenant_code}
+      # and be on the same Docker bridge network as this Hermes container.
+      # Example: PB_URL: "http://pb-t001:8090"
+      PB_URL: "http://pb-{tenant_code}:8090"
+
+      # Standardized superuser email. Safe to use the same value across all
+      # tenants — each tenant has its own isolated PocketBase instance.
+      PB_EMAIL: "hermes@internal"
+
+      # Injected from the tenant .env file. Generate with:
+      #   openssl rand -hex 32
+      PB_PASSWORD: "${PB_HERMES_PASSWORD}"
+
+    # Per-tool call timeout (seconds). Increase if PocketBase is slow to
+    # respond under load or the container is resource-constrained.
+    timeout: 60
+
+    # Initial connection timeout for the MCP stdio process (seconds).
+    connect_timeout: 30
