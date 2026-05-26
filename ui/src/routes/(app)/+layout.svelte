@@ -17,11 +17,10 @@
 		{
 			label: 'MAIN // OPS',
 			items: [
-				{ href: '/',              label: 'DASHBOARD'      },
-				{ href: '/contacts',      label: 'CONTACTOS'      },
-				{ href: '/companies',     label: 'EMPRESAS'       },
-				{ href: '/deals',         label: 'NEGOCIOS'       },
-				{ href: '/conversations', label: 'CONVERSACIONES' },
+				{ href: '/',          label: 'DASHBOARD'  },
+				{ href: '/contacts',  label: 'CONTACTOS'  },
+				{ href: '/companies', label: 'EMPRESAS'   },
+				{ href: '/deals',     label: 'NEGOCIOS'   },
 			],
 		},
 		{
@@ -60,24 +59,24 @@
 
 	// ── Footer stats ────────────────────────────────────────────────────────
 	let pipelineTotal = $state(0);
-	let todayConvs    = $state(0);
+	let tasksDueToday = $state(0);
 
 	onMount(async () => {
 		const today = new Date().toISOString().slice(0, 10);
 		try {
-			const [deals, convs] = await Promise.all([
+			const [deals, tasks] = await Promise.all([
 				pb.collection('deals').getFullList({
 					filter: "stage != 'won' && stage != 'lost'",
 					fields: 'value',
 				}),
-				pb.collection('conversations').getList(1, 1, {
-					filter: `created >= '${today} 00:00:00'`,
+				pb.collection('tasks').getList(1, 1, {
+					filter: `status != 'done' && due_date != '' && due_date <= '${today} 23:59:59'`,
 				}),
 			]);
 			pipelineTotal = (deals as { value?: number }[]).reduce(
 				(s, d) => s + (d.value ?? 0), 0,
 			);
-			todayConvs = convs.totalItems;
+			tasksDueToday = tasks.totalItems;
 		} catch { /* non-critical */ }
 	});
 
@@ -259,10 +258,10 @@
 			</div>
 		</div>
 		<div class="hidden items-center gap-3 sm:flex">
-			<div class="text-[9px] tracking-widest text-[#444] uppercase">CONVERSACIONES_HOY</div>
+			<div class="text-[9px] tracking-widest text-[#444] uppercase">TAREAS_HOY</div>
 			<div class="text-[11px] text-white">
-				{todayConvs}
-				<span class="text-[#444] text-[9px] ml-1">/ MSGS</span>
+				{tasksDueToday}
+				<span class="text-[#444] text-[9px] ml-1">/ VENCIDAS</span>
 			</div>
 		</div>
 	</div>
