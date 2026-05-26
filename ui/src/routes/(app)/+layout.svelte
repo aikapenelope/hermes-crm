@@ -230,7 +230,7 @@
 
 			<!-- Right: user info -->
 			<div class="flex items-center gap-3">
-				<div class="h-1.5 w-1.5 rounded-full bg-blue-500 hidden sm:block"></div>
+				<div class="h-1.5 w-1.5 rounded-full bg-white hidden sm:block"></div>
 				<div class="hidden text-right leading-tight sm:block">
 					<div class="text-white tracking-widest uppercase" style="font-size: 12px; font-family: system-ui, sans-serif; font-weight: 600;">
 						{userName.split('@')[0].slice(0, 16)}
@@ -282,7 +282,7 @@
 			{tzOffset} // {timeStr}
 		</div>
 		<div class="flex gap-0.5">
-			<div class="h-3 w-1 bg-blue-500"></div>
+			<div class="h-3 w-1 bg-white"></div>
 			<div class="h-3 w-1 bg-yellow-500"></div>
 			<div class="h-3 w-1 bg-white"></div>
 		</div>

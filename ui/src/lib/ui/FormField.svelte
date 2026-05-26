@@ -1,29 +1,20 @@
 <script lang="ts">
 	interface Props {
 		label: string;
-		error?: string;
-		hint?: string;
 		required?: boolean;
+		error?: string;
 		children: import('svelte').Snippet;
 	}
-
-	let { label, error, hint, required = false, children }: Props = $props();
+	let { label, required = false, error, children }: Props = $props();
 </script>
 
-<div class="flex flex-col gap-1.5">
-	<!-- svelte-ignore a11y_label_has_associated_control -->
-	<label class="text-sm font-medium text-slate-300">
+<div>
+	<label class="mb-1.5 flex items-center gap-1 text-[9px] tracking-widest text-[#555] uppercase">
 		{label}
-		{#if required}
-			<span class="ml-0.5 text-red-400" aria-hidden="true">*</span>
-		{/if}
+		{#if required}<span class="text-red-400">*</span>{/if}
 	</label>
-
 	{@render children()}
-
 	{#if error}
-		<p class="text-xs text-red-400" role="alert">{error}</p>
-	{:else if hint}
-		<p class="text-xs text-slate-500">{hint}</p>
+		<p class="mt-1 text-[9px] text-red-400">{error}</p>
 	{/if}
 </div>

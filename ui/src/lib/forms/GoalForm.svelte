@@ -95,9 +95,8 @@
 	</div>
 
 	<FormField
-		label="Período"
+		label="Período (Ej: 2026-Q2 · 2026-05 · 2026)"
 		error={errors.period}
-		hint="Ej: 2026-Q2 · 2026-05 · 2026 · all-time"
 	>
 		<Input
 			bind:value={period}

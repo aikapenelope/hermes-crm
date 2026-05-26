@@ -289,7 +289,7 @@
 								{goal.pct >= 100
 									? 'border-emerald-900 text-transparent'
 									: goal.pct >= 75
-										? 'text-blue-400'
+										? 'text-white'
 										: 'text-[#666]'
 								}"
 								style={goal.pct >= 100

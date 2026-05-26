@@ -97,7 +97,7 @@
 	<div class="mb-5 flex items-center justify-between">
 		<div>
 			<h1>Tareas</h1>
-			<p class="mt-0.5 text-sm text-slate-400">{result ? `${result.totalItems} tareas` : '…'}</p>
+			<p class="mt-0.5 text-sm text-[#888]">{result ? `${result.totalItems} tareas` : '…'}</p>
 		</div>
 		<Btn variant="primary" onclick={openCreate}>
 			{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}
@@ -107,7 +107,7 @@
 
 	<div class="mb-4 flex gap-3 flex-wrap">
 		<select bind:value={filterStatus}
-			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-[#222] bg-[#0a0a0a] px-3 py-2 text-sm text-[#888] outline-none focus:border-white">
 			<option value="">Todos los estados</option>
 			<option value="todo">Pendiente</option>
 			<option value="in_progress">En progreso</option>
@@ -115,7 +115,7 @@
 			<option value="cancelled">Canceladas</option>
 		</select>
 		<select bind:value={filterPriority}
-			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-[#222] bg-[#0a0a0a] px-3 py-2 text-sm text-[#888] outline-none focus:border-white">
 			<option value="">Todas las prioridades</option>
 			<option value="urgent">Urgente</option>
 			<option value="high">Alta</option>
@@ -145,8 +145,8 @@
 		<div class="space-y-1.5">
 			{#each result.items as task (task.id)}
 				<div
-					class="group flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900 px-4 py-3
-						transition-colors hover:border-slate-700
+					class="group flex items-center gap-3 border border-[#1a1a1a] bg-[#090909] px-4 py-3
+						transition-colors hover:border-[#333]
 						{task.status === 'done' || task.status === 'cancelled' ? 'opacity-60' : ''}"
 				>
 					<!-- Checkbox -->
@@ -155,7 +155,7 @@
 						class="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all
 							{task.status === 'done'
 							? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-							: 'border-slate-600 hover:border-emerald-500'}"
+							: 'border-[#333] hover:border-emerald-500'}"
 					>
 						{#if task.status === 'done'}
 							<Check class="h-3 w-3" />
@@ -168,7 +168,7 @@
 							{#if task.type}
 								<span class="text-sm" title={task.type}>{typeLabel[task.type] ?? ''}</span>
 							{/if}
-							<span class="text-sm font-medium {task.status === 'done' ? 'line-through text-slate-500' : 'text-slate-200'}">
+							<span class="text-sm font-medium {task.status === 'done' ? 'line-through text-[#555]' : 'text-white'}">
 								{task.title}
 							</span>
 						</div>
@@ -176,7 +176,7 @@
 							<a
 								href="/contacts/{task.expand.contact.id}"
 								onclick={(e) => e.stopPropagation()}
-								class="text-xs text-blue-400 hover:text-blue-300"
+								class="text-xs text-[#555] hover:text-white"
 							>
 								{task.expand.contact.name}
 							</a>
@@ -191,20 +191,20 @@
 							</Badge>
 						{/if}
 						{#if task.due_date}
-							<span class="text-xs {isOverdue(task) ? 'font-medium text-rose-400' : 'text-slate-500'}">
+							<span class="text-xs {isOverdue(task) ? 'font-medium text-rose-400' : 'text-[#555]'}">
 								{task.due_date.slice(0, 10)}
 							</span>
 						{/if}
 						<div class="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
 							<button
 								onclick={() => openEdit(task)}
-								class="rounded p-1 text-slate-500 hover:bg-slate-700 hover:text-slate-200"
+								class="rounded p-1 text-[#555] hover:bg-[#111] hover:text-white"
 							>
 								<Pencil class="h-3.5 w-3.5" />
 							</button>
 							<button
 								onclick={() => { deleteTarget = task; }}
-								class="rounded p-1 text-slate-500 hover:bg-red-900/40 hover:text-red-400"
+								class="rounded p-1 text-[#555] hover:bg-red-900/40 hover:text-red-400"
 							>
 								<Trash2 class="h-3.5 w-3.5" />
 							</button>
@@ -215,7 +215,7 @@
 
 			{#if result.totalPages > 1}
 				<div class="flex items-center justify-between pt-2">
-					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
+					<span class="text-xs text-[#555]">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
 						<Btn variant="ghost" size="sm" onclick={() => { page = page - 1; }} disabled={page <= 1}>← Anterior</Btn>
 						<Btn variant="ghost" size="sm" onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}>Siguiente →</Btn>

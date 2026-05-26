@@ -79,50 +79,50 @@
 
 <div class="flex-1 p-6 space-y-6">
 	<div>
-		<h1 class="text-xl font-semibold text-slate-100">Segmentos</h1>
-		<p class="text-sm text-slate-400">Vistas inteligentes calculadas en tiempo real</p>
+		<h1 class="text-xl font-semibold text-white">Segmentos</h1>
+		<p class="text-sm text-[#888]">Vistas inteligentes calculadas en tiempo real</p>
 	</div>
 
 	{#each segments as seg}
 		{@const data = segData[seg.id]}
-		<div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
-			<div class="flex items-start gap-3 border-b border-slate-800 px-4 py-3">
-				<BarChart2 class="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+		<div class="border border-[#1a1a1a] bg-[#090909] overflow-hidden">
+			<div class="flex items-start gap-3 border-b border-[#1a1a1a] px-4 py-3">
+				<BarChart2 class="mt-0.5 h-4 w-4 shrink-0 text-[#888]" />
 				<div>
-					<h2 class="text-sm font-semibold text-slate-200">{seg.label}</h2>
-					<p class="text-xs text-slate-500">{seg.description}</p>
+					<h2 class="text-sm font-semibold text-white">{seg.label}</h2>
+					<p class="text-xs text-[#555]">{seg.description}</p>
 				</div>
 				{#if !data.loading}
-					<span class="ml-auto shrink-0 text-xs text-slate-500">{data.rows.length} registros</span>
+					<span class="ml-auto shrink-0 text-xs text-[#555]">{data.rows.length} registros</span>
 				{/if}
 			</div>
 
 			{#if data.loading}
-				<div class="flex items-center gap-2 p-4 text-sm text-slate-400">
-					<div class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-600 border-t-blue-500"></div>
+				<div class="flex items-center gap-2 p-4 text-sm text-[#888]">
+					<div class="h-3.5 w-3.5 animate-spin rounded-full border border-[#333] border-t-white"></div>
 					Calculando…
 				</div>
 			{:else if data.error}
 				<p class="p-4 text-sm text-rose-400">{data.error}</p>
 			{:else if data.rows.length === 0}
-				<p class="p-4 text-sm text-slate-500">Sin registros en este segmento</p>
+				<p class="p-4 text-sm text-[#555]">Sin registros en este segmento</p>
 			{:else}
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">
 						<thead>
-							<tr class="border-b border-slate-800/50">
+							<tr class="border-b border-[#1a1a1a]">
 								{#each seg.columns as col}
-									<th class="px-4 py-2 text-left text-xs font-medium text-slate-500 capitalize">
+									<th class="px-4 py-2 text-left text-xs font-medium text-[#555] capitalize">
 										{col.replace(/_/g, ' ')}
 									</th>
 								{/each}
 							</tr>
 						</thead>
-						<tbody class="divide-y divide-slate-800/40">
+						<tbody class="divide-y divide-[#111]">
 							{#each data.rows as row (row.id)}
-								<tr class="hover:bg-slate-800/20 transition-colors">
+								<tr class="hover:bg-[#0d0d0d] transition-colors">
 									{#each seg.columns as col}
-										<td class="px-4 py-2 text-slate-300">{fmt(row[col])}</td>
+										<td class="px-4 py-2 text-[#ccc]">{fmt(row[col])}</td>
 									{/each}
 								</tr>
 							{/each}

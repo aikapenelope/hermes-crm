@@ -73,24 +73,24 @@
 
 <div class="flex-1 p-5 md:p-6 max-w-lg">
 	<div class="mb-8">
-		<h1 class="text-xl font-semibold text-slate-50">Ajustes de cuenta</h1>
-		<p class="mt-0.5 text-sm text-slate-400">Perfil y seguridad</p>
+		<h1 class="text-xl font-semibold text-white">Ajustes de cuenta</h1>
+		<p class="mt-0.5 text-sm text-[#888]">Perfil y seguridad</p>
 	</div>
 
 	<!-- ── Profile card ─────────────────────────────────────────────────── -->
-	<div class="mb-6 rounded-xl border border-slate-800 bg-slate-900">
-		<div class="border-b border-slate-800 px-5 py-4">
+	<div class="mb-6 border border-[#1a1a1a] bg-[#090909]">
+		<div class="border-b border-[#1a1a1a] px-5 py-4">
 			<!-- Avatar preview -->
 			<div class="mb-4 flex items-center gap-3">
 				<div class="flex h-12 w-12 items-center justify-center rounded-full
-					bg-gradient-to-br from-blue-600/50 to-violet-600/50 text-lg font-bold text-slate-200">
+					bg-gradient-to-br from-[#1a1a1a] to-[#111] text-lg font-bold text-white">
 					{userInitial}
 				</div>
 				<div>
-					<p class="text-sm font-medium text-slate-200">
+					<p class="text-sm font-medium text-white">
 						{profileName || profileEmail || '—'}
 					</p>
-					<p class="text-xs text-slate-500">{profileEmail}</p>
+					<p class="text-xs text-[#555]">{profileEmail}</p>
 				</div>
 			</div>
 		</div>
@@ -122,10 +122,10 @@
 	</div>
 
 	<!-- ── Password card ────────────────────────────────────────────────── -->
-	<div class="rounded-xl border border-slate-800 bg-slate-900">
-		<div class="border-b border-slate-800 px-5 py-4">
-			<h2 class="text-sm font-semibold text-slate-200">Cambiar contraseña</h2>
-			<p class="mt-0.5 text-xs text-slate-500">Mínimo 8 caracteres</p>
+	<div class="border border-[#1a1a1a] bg-[#090909]">
+		<div class="border-b border-[#1a1a1a] px-5 py-4">
+			<h2 class="text-sm font-semibold text-white">Cambiar contraseña</h2>
+			<p class="mt-0.5 text-xs text-[#555]">Mínimo 8 caracteres</p>
 		</div>
 
 		<div class="space-y-4 p-5">

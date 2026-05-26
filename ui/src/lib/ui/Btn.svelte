@@ -20,20 +20,20 @@
 		...rest
 	}: Props = $props();
 
-	const base = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50';
+	const base = 'inline-flex items-center justify-center gap-2 font-medium tracking-widest uppercase transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-40';
 
 	const variants: Record<string, string> = {
-		primary:   'bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700',
-		secondary: 'bg-slate-800 text-slate-200 hover:bg-slate-700 active:bg-slate-900 border border-slate-700',
-		ghost:     'text-slate-400 hover:bg-slate-800 hover:text-slate-200',
+		primary:   'bg-white text-black hover:bg-[#e0e0e0] active:bg-[#ccc]',
+		secondary: 'bg-transparent text-[#888] hover:text-white border border-[#333] hover:border-[#555]',
+		ghost:     'text-[#555] hover:text-white',
 		danger:    'bg-red-600 text-white hover:bg-red-500 active:bg-red-700',
-		outline:   'border border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100',
+		outline:   'border border-[#333] text-[#888] hover:border-white hover:text-white',
 	};
 
 	const sizes: Record<string, string> = {
-		sm: 'px-2.5 py-1.5 text-xs',
-		md: 'px-3.5 py-2 text-sm',
-		lg: 'px-5 py-2.5 text-base',
+		sm: 'px-2.5 py-1.5 text-[9px]',
+		md: 'px-3.5 py-2 text-[10px]',
+		lg: 'px-5 py-2.5 text-xs',
 	};
 </script>
 
@@ -43,7 +43,7 @@
 	{...rest}
 >
 	{#if loading}
-		<span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
+		<span class="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"></span>
 	{:else if icon}
 		{@render icon()}
 	{/if}

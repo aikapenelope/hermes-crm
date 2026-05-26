@@ -17,7 +17,7 @@
 					? 'bg-emerald-600 text-white'
 					: t.variant === 'error'
 						? 'bg-red-600 text-white'
-						: 'bg-slate-700 text-slate-100'}"
+						: 'bg-[#222] text-white'}"
 			>
 				{t.message}
 			</div>

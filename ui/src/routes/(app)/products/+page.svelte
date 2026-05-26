@@ -63,7 +63,7 @@
 	<div class="mb-5 flex items-center justify-between">
 		<div>
 			<h1>Productos & Servicios</h1>
-			<p class="mt-0.5 text-sm text-slate-400">{result ? `${result.totalItems} items` : '…'}</p>
+			<p class="mt-0.5 text-sm text-[#888]">{result ? `${result.totalItems} items` : '…'}</p>
 		</div>
 		<Btn variant="primary" onclick={() => { editingProduct = null; sheetOpen = true; }}>
 			{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}
@@ -73,7 +73,7 @@
 
 	<div class="mb-4 flex gap-3 flex-wrap">
 		<select bind:value={filterType}
-			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-[#222] bg-[#0a0a0a] px-3 py-2 text-[10px] text-[#888] outline-none focus:border-white">
 			<option value="">Todos los tipos</option>
 			<option value="product">Producto</option>
 			<option value="service">Servicio</option>
@@ -81,14 +81,14 @@
 			<option value="license">Licencia</option>
 		</select>
 		<select bind:value={filterActive}
-			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500">
+			class="rounded-lg border border-[#222] bg-[#0a0a0a] px-3 py-2 text-[10px] text-[#888] outline-none focus:border-white">
 			<option value="">Activos e inactivos</option>
 			<option value="true">Solo activos</option>
 			<option value="false">Solo inactivos</option>
 		</select>
 	</div>
 
-	<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
+	<div class="overflow-hidden border border-[#1a1a1a] bg-[#090909]">
 		{#if loading && !result}
 			<div class="p-5"><Skeleton rows={5} /></div>
 		{:else if result && result.items.length === 0}
@@ -101,20 +101,20 @@
 		{:else if result}
 			<table class="w-full text-sm">
 				<thead>
-					<tr class="border-b border-slate-800">
-						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400">Producto</th>
-						<th class="px-4 py-3 text-left text-xs font-medium text-slate-400 hidden md:table-cell">Tipo</th>
-						<th class="px-4 py-3 text-right text-xs font-medium text-slate-400">Precio</th>
-						<th class="px-4 py-3 text-center text-xs font-medium text-slate-400">Estado</th>
-						<th class="px-4 py-3 text-right text-xs font-medium text-slate-400">Acciones</th>
+					<tr class="border-b border-[#1a1a1a]">
+						<th class="px-4 py-3 text-left text-xs font-medium text-[#888]">Producto</th>
+						<th class="px-4 py-3 text-left text-xs font-medium text-[#888] hidden md:table-cell">Tipo</th>
+						<th class="px-4 py-3 text-right text-xs font-medium text-[#888]">Precio</th>
+						<th class="px-4 py-3 text-center text-xs font-medium text-[#888]">Estado</th>
+						<th class="px-4 py-3 text-right text-xs font-medium text-[#888]">Acciones</th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-slate-800">
+				<tbody class="divide-y divide-[#1a1a1a]">
 					{#each result.items as p (p.id)}
-						<tr class="group hover:bg-slate-800/40 transition-colors {!p.active ? 'opacity-50' : ''}">
+						<tr class="group hover:bg-[#111] transition-colors {!p.active ? 'opacity-50' : ''}">
 							<td class="px-4 py-3">
-								<p class="font-medium text-slate-200">{p.name}</p>
-								{#if p.sku}<p class="font-mono text-xs text-slate-500">{p.sku}</p>{/if}
+								<p class="font-medium text-white">{p.name}</p>
+								{#if p.sku}<p class="font-mono text-xs text-[#555]">{p.sku}</p>{/if}
 							</td>
 							<td class="px-4 py-3 hidden md:table-cell">
 								<Badge variant="slate">{typeLabel[p.type] ?? p.type}</Badge>
@@ -130,11 +130,11 @@
 							<td class="px-4 py-3 text-right">
 								<div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 									<button onclick={() => { editingProduct = p; sheetOpen = true; }}
-										class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-700 hover:text-slate-200">
+										class="rounded-lg p-1.5 text-[#555] hover:bg-[#111] hover:text-white">
 										<Pencil class="h-3.5 w-3.5" />
 									</button>
 									<button onclick={() => { deleteTarget = p; }}
-										class="rounded-lg p-1.5 text-slate-400 hover:bg-red-900/40 hover:text-red-400">
+										class="rounded-lg p-1.5 text-[#888] hover:bg-red-900/40 hover:text-red-400">
 										<Trash2 class="h-3.5 w-3.5" />
 									</button>
 								</div>
@@ -144,8 +144,8 @@
 				</tbody>
 			</table>
 			{#if result.totalPages > 1}
-				<div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
-					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
+				<div class="flex items-center justify-between border-t border-[#1a1a1a] px-4 py-3">
+					<span class="text-xs text-[#555]">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
 						<Btn variant="ghost" size="sm" onclick={() => { page = page - 1; }} disabled={page <= 1}>← Anterior</Btn>
 						<Btn variant="ghost" size="sm" onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}>Siguiente →</Btn>

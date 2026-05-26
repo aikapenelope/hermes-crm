@@ -105,7 +105,7 @@
 
 	<label class="flex items-center gap-3 cursor-pointer">
 		<input type="checkbox" bind:checked={active} class="rounded border-slate-600" />
-		<span class="text-sm text-slate-300">Producto activo (visible en catálogo)</span>
+		<span class="text-sm text-[#ccc]">Producto activo (visible en catálogo)</span>
 	</label>
 
 	<div class="flex justify-end gap-2 pt-2">

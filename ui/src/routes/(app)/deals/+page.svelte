@@ -15,7 +15,7 @@
 
 	const stages = [
 		{ id: 'lead',        label: 'LEAD',        dot: 'bg-[#555]'   },
-		{ id: 'qualified',   label: 'CALIFICADO',  dot: 'bg-blue-500' },
+		{ id: 'qualified',   label: 'CALIFICADO',  dot: 'bg-white'    },
 		{ id: 'proposal',    label: 'PROPUESTA',   dot: 'bg-amber-500'},
 		{ id: 'negotiation', label: 'NEGOCIACIÓN', dot: 'bg-orange-500'},
 		{ id: 'won',         label: 'GANADO',      dot: 'bg-emerald-500'},

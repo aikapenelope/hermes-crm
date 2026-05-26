@@ -132,7 +132,7 @@
 	const priorityDot: Record<string, string> = {
 		urgent: 'bg-rose-500',
 		high:   'bg-amber-500',
-		medium: 'bg-blue-500',
+		medium: 'bg-white',
 		low:    'bg-[#444]',
 	};
 	const statusOpacity: Record<string, string> = {
@@ -309,7 +309,7 @@
 										{#if task.status === 'done'}
 											<span class="text-[8px] text-emerald-600">DONE</span>
 										{:else if task.status === 'in_progress'}
-											<span class="text-[8px] text-blue-600">IN_PROGRESS</span>
+											<span class="text-[8px] text-white">IN_PROGRESS</span>
 										{/if}
 									</div>
 									{#if task.expand?.contact}
@@ -332,7 +332,7 @@
 			<div class="border border-[#1a1a1a] bg-[#090909] p-4">
 				<div class="mb-3 text-[9px] tracking-widest text-[#555]">PRIORIDAD // LEYENDA</div>
 				<div class="space-y-2">
-					{#each [['urgent','URGENTE','bg-rose-500'],['high','ALTA','bg-amber-500'],['medium','MEDIA','bg-blue-500'],['low','BAJA','bg-[#444]']] as [key,label,cls]}
+					{#each [['urgent','URGENTE','bg-rose-500'],['high','ALTA','bg-amber-500'],['medium','MEDIA','bg-white'],['low','BAJA','bg-[#444]']] as [key,label,cls]}
 						<div class="flex items-center gap-2">
 							<div class="h-1.5 w-1.5 rounded-full {cls}"></div>
 							<span class="text-[9px] text-[#666]">{label}</span>
