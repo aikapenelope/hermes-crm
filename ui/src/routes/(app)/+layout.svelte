@@ -1,32 +1,37 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { afterNavigate } from '$app/navigation';
-	import { goto } from '$app/navigation';
-	import { fly, fade } from 'svelte/transition';
+	import { afterNavigate, goto } from '$app/navigation';
+	import { onMount, onDestroy } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import pb from '$lib/pb';
 	import { currentUser } from '$lib/stores';
-	import {
-		LayoutDashboard, Users, Building2, Briefcase,
-		MessageCircle, CheckSquare, Package, BarChart2,
-		LogOut, Menu, X,
-	} from 'lucide-svelte';
 
 	let { children } = $props();
 
+	// ── Mobile sidebar ──────────────────────────────────────────────────────
 	let sidebarOpen = $state(false);
-
-	// Close sidebar on navigation (mobile UX)
 	afterNavigate(() => { sidebarOpen = false; });
 
-	const nav = [
-		{ href: '/',              label: 'Dashboard',      Icon: LayoutDashboard },
-		{ href: '/contacts',      label: 'Contactos',      Icon: Users           },
-		{ href: '/companies',     label: 'Empresas',       Icon: Building2       },
-		{ href: '/deals',         label: 'Negocios',       Icon: Briefcase       },
-		{ href: '/conversations', label: 'Conversaciones', Icon: MessageCircle   },
-		{ href: '/tasks',         label: 'Tareas',         Icon: CheckSquare     },
-		{ href: '/products',      label: 'Productos',      Icon: Package         },
-		{ href: '/segments',      label: 'Segmentos',      Icon: BarChart2       },
+	// ── Nav groups ──────────────────────────────────────────────────────────
+	const navGroups = [
+		{
+			label: 'MAIN // OPS',
+			items: [
+				{ href: '/',              label: 'DASHBOARD'      },
+				{ href: '/contacts',      label: 'CONTACTOS'      },
+				{ href: '/companies',     label: 'EMPRESAS'       },
+				{ href: '/deals',         label: 'NEGOCIOS'       },
+				{ href: '/conversations', label: 'CONVERSACIONES' },
+			],
+		},
+		{
+			label: 'ANALYTICS // MGMT',
+			items: [
+				{ href: '/tasks',    label: 'TAREAS'    },
+				{ href: '/segments', label: 'SEGMENTOS' },
+				{ href: '/products', label: 'PRODUCTOS' },
+			],
+		},
 	];
 
 	function isActive(href: string) {
@@ -39,129 +44,237 @@
 		await goto('/login');
 	}
 
-	const userInitial = $derived(
-		String($currentUser?.get?.('name') ?? $currentUser?.email ?? '?')[0].toUpperCase()
-	);
+	// ── Live clock ──────────────────────────────────────────────────────────
+	let timeStr  = $state('');
+	let tzOffset = $state('');
+
+	function tick() {
+		const now = new Date();
+		timeStr = now.toLocaleTimeString('es', { hour12: false });
+		const off = -(now.getTimezoneOffset() / 60);
+		tzOffset = `UTC${off >= 0 ? '+' : ''}${off}`;
+	}
+	tick();
+	const clockInterval = setInterval(tick, 1000);
+	onDestroy(() => clearInterval(clockInterval));
+
+	// ── Footer stats ────────────────────────────────────────────────────────
+	let pipelineTotal = $state(0);
+	let todayConvs    = $state(0);
+
+	onMount(async () => {
+		const today = new Date().toISOString().slice(0, 10);
+		try {
+			const [deals, convs] = await Promise.all([
+				pb.collection('deals').getFullList({
+					filter: "stage != 'won' && stage != 'lost'",
+					fields: 'value',
+				}),
+				pb.collection('conversations').getList(1, 1, {
+					filter: `created >= '${today} 00:00:00'`,
+				}),
+			]);
+			pipelineTotal = (deals as { value?: number }[]).reduce(
+				(s, d) => s + (d.value ?? 0), 0,
+			);
+			todayConvs = convs.totalItems;
+		} catch { /* non-critical */ }
+	});
+
+	// ── User info ───────────────────────────────────────────────────────────
+	const userInitials = $derived(() => {
+		const raw = String($currentUser?.get?.('name') ?? $currentUser?.email ?? 'AG');
+		return raw.split(/[\s@]+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+	});
 	const userName = $derived(
-		String($currentUser?.get?.('name') ?? $currentUser?.email ?? 'Usuario')
+		String($currentUser?.get?.('name') ?? $currentUser?.email ?? 'AGENTE').toUpperCase(),
 	);
-	const userEmail = $derived(String($currentUser?.email ?? ''));
 </script>
 
-<div class="relative flex h-screen overflow-hidden">
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- ROOT                                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="flex h-screen overflow-hidden bg-[#070707] text-[#888] selection:bg-[#333]"
+     style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 11px; letter-spacing: 0.08em;">
 
-	<!-- ── Mobile overlay ─────────────────────────────────────────────────── -->
+	<!-- ── Mobile overlay ──────────────────────────────────────────────────── -->
 	{#if sidebarOpen}
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
-			class="fixed inset-0 z-30 bg-black/60 backdrop-blur-[2px] lg:hidden"
+			class="fixed inset-0 z-30 bg-black/70 lg:hidden"
 			role="presentation"
 			onclick={() => { sidebarOpen = false; }}
-			transition:fade={{ duration: 200 }}
+			transition:fade={{ duration: 150 }}
 		></div>
 	{/if}
 
-	<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+	<!-- ════════════════════════════════════════════════════════════════════ -->
+	<!-- SIDEBAR                                                              -->
+	<!-- ════════════════════════════════════════════════════════════════════ -->
 	<aside
-		class="
-			fixed inset-y-0 left-0 z-40 flex w-[var(--sidebar-w)] shrink-0 flex-col
-			border-r border-slate-800 bg-slate-900
-			transition-transform duration-250 ease-in-out
-			{sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}
-			lg:relative lg:translate-x-0 lg:shadow-none
-		"
-		aria-label="Navegación principal"
+		class="fixed inset-y-0 left-0 z-40 flex w-64 flex-shrink-0 flex-col justify-between
+			border-r border-[#1a1a1a] bg-[#070707]
+			transition-transform duration-200
+			{sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+			lg:relative lg:translate-x-0"
 	>
-		<!-- Brand -->
-		<div class="flex h-14 items-center justify-between border-b border-slate-800 px-4">
-			<div class="flex items-center gap-2.5">
-				<div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600">
-					<svg class="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none"
-						stroke="currentColor" stroke-width="2.5">
-						<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-					</svg>
+		<div>
+			<!-- System header -->
+			<div class="p-6 pb-10">
+				<div class="mb-1 text-[9px] tracking-widest text-[#555] uppercase">SYS.NAVIGATION</div>
+				<div class="flex items-center justify-between tracking-widest text-[#999] uppercase">
+					<span>V.2026.CRM</span>
+					<span class="text-[#444]">ID: HRM-01</span>
 				</div>
-				<span class="text-sm font-semibold text-slate-100">Hermes CRM</span>
 			</div>
-			<!-- Close btn on mobile -->
-			<button
-				onclick={() => { sidebarOpen = false; }}
-				class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200 lg:hidden"
-				aria-label="Cerrar menú"
-			>
-				<X class="h-4 w-4" />
-			</button>
+
+			<!-- Nav groups -->
+			<nav class="space-y-8">
+				{#each navGroups as group}
+					<div>
+						<div class="mb-4 px-6 text-[9px] tracking-widest text-[#444] uppercase">
+							{group.label}
+						</div>
+						<ul class="space-y-0.5">
+							{#each group.items as item}
+								<li class="relative">
+									{#if isActive(item.href)}
+										<!-- Rainbow top line on active item -->
+										<div class="absolute top-0 left-0 right-0 h-[1px]"
+											style="background: linear-gradient(to right, #ff3333, #ffaa00, #00ffaa, #00aaff, #aa00ff);">
+										</div>
+									{/if}
+									<a
+										href={item.href}
+										class="block px-6 py-3 tracking-widest uppercase transition-colors
+											{isActive(item.href)
+											? 'bg-[#111] text-white'
+											: 'hover:text-white'}"
+									>
+										{item.label}
+									</a>
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/each}
+			</nav>
 		</div>
 
-		<!-- Nav links -->
-		<nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Menú principal">
-			{#each nav as item}
-				<a
-					href={item.href}
-					class="mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors
-						{isActive(item.href)
-						? 'bg-slate-800 text-slate-100 font-medium'
-						: 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}"
-				>
-					<item.Icon class="h-4 w-4 shrink-0" />
-					{item.label}
-				</a>
-			{/each}
-		</nav>
-
-		<!-- User footer -->
-		<div class="border-t border-slate-800 p-3">
-			<div class="flex items-center gap-2.5 rounded-lg px-2 py-2">
-				<div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full
-					bg-gradient-to-br from-blue-600/50 to-violet-600/50 text-xs font-bold text-slate-200">
-					{userInitial}
-				</div>
-				<div class="min-w-0 flex-1">
-					<p class="truncate text-xs font-medium text-slate-200">{userName}</p>
-					<p class="truncate text-xs text-slate-500">{userEmail}</p>
-				</div>
-				<button
-					onclick={logout}
-					class="rounded-lg p-1.5 text-slate-500 transition-colors hover:text-red-400"
-					title="Cerrar sesión"
-					aria-label="Cerrar sesión"
-				>
-					<LogOut class="h-4 w-4" />
-				</button>
-			</div>
+		<!-- Bottom: user / logout -->
+		<div class="p-6">
+			<button
+				onclick={logout}
+				class="tracking-widest uppercase hover:text-white transition-colors text-left w-full"
+				title="Cerrar sesión"
+			>
+				{userName.split('@')[0].slice(0, 18)}
+			</button>
 		</div>
 	</aside>
 
-	<!-- ── Main content ────────────────────────────────────────────────────── -->
-	<div class="flex flex-1 flex-col overflow-hidden">
-		<!-- Mobile topbar -->
-		<header class="flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950 px-4 lg:hidden">
-			<button
-				onclick={() => { sidebarOpen = true; }}
-				class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-				aria-label="Abrir menú"
-			>
-				<Menu class="h-5 w-5" />
-			</button>
-			<div class="flex items-center gap-2">
-				<div class="flex h-6 w-6 items-center justify-center rounded-md bg-blue-600">
-					<svg class="h-3 w-3 text-white" viewBox="0 0 24 24" fill="none"
-						stroke="currentColor" stroke-width="2.5">
-						<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+	<!-- ════════════════════════════════════════════════════════════════════ -->
+	<!-- MAIN                                                                 -->
+	<!-- ════════════════════════════════════════════════════════════════════ -->
+	<main class="flex flex-1 flex-col overflow-hidden">
+
+		<!-- ── Topbar ──────────────────────────────────────────────────────── -->
+		<header class="flex h-16 flex-shrink-0 items-center justify-between
+			border-b border-[#1a1a1a] px-6 lg:px-8">
+
+			<!-- Left: hamburger (mobile) + brand + status -->
+			<div class="flex items-center gap-4 lg:gap-6">
+				<!-- Hamburger — mobile only -->
+				<button
+					onclick={() => { sidebarOpen = true; }}
+					class="text-[#555] hover:text-white transition-colors lg:hidden"
+					aria-label="Abrir menú"
+				>
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
 					</svg>
+				</button>
+
+				<!-- Brand -->
+				<div class="text-white font-bold tracking-tight" style="font-size: 16px; letter-spacing: -0.02em; font-family: system-ui, sans-serif;">
+					HERMES<span class="text-[#444]">.</span>CRM
 				</div>
-				<span class="text-sm font-semibold text-slate-100">Hermes CRM</span>
+
+				<!-- Status -->
+				<div class="hidden items-center gap-2 text-[9px] tracking-widest text-[#555] uppercase sm:flex">
+					<div class="h-1.5 w-1.5 rounded-full bg-yellow-500"></div>
+					SISTEMA.ONLINE // SINCRONIZADO
+				</div>
 			</div>
-			<!-- Right side: current page indicator or avatar -->
-			<div class="flex h-8 w-8 items-center justify-center rounded-full
-				bg-gradient-to-br from-blue-600/50 to-violet-600/50 text-xs font-bold text-slate-200">
-				{userInitial}
+
+			<!-- Center: search -->
+			<div class="hidden flex-1 px-8 lg:block" style="max-width: 480px;">
+				<input
+					type="text"
+					placeholder="BUSCAR [CONTACTOS / NEGOCIOS / TAREAS]"
+					class="w-full border border-[#222] bg-transparent px-4 py-2 text-[10px]
+						tracking-widest text-[#888] placeholder-[#444] uppercase
+						focus:border-[#444] focus:outline-none"
+				/>
+			</div>
+
+			<!-- Right: user info -->
+			<div class="flex items-center gap-3">
+				<div class="h-1.5 w-1.5 rounded-full bg-blue-500 hidden sm:block"></div>
+				<div class="hidden text-right leading-tight sm:block">
+					<div class="text-white tracking-widest uppercase" style="font-size: 12px; font-family: system-ui, sans-serif; font-weight: 600;">
+						{userName.split('@')[0].slice(0, 16)}
+					</div>
+					<div class="text-[9px] tracking-widest text-[#555] uppercase">AGENTE.CRM</div>
+				</div>
+				<div class="flex h-8 w-8 items-center justify-center border border-[#333]
+					bg-[#1a1a1a] text-[11px] font-bold text-white tracking-widest">
+					{userInitials()}
+				</div>
 			</div>
 		</header>
 
-		<!-- Page content -->
-		<main class="flex flex-1 flex-col overflow-y-auto bg-slate-950">
+		<!-- ── Scrollable content ───────────────────────────────────────────── -->
+		<div class="flex-1 overflow-y-auto" style="padding-bottom: var(--footer-h);">
 			{@render children()}
-		</main>
-	</div>
+		</div>
+	</main>
+
 </div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER — fixed status bar                                               -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<footer
+	class="fixed bottom-0 right-0 z-20 flex h-12 items-center justify-between
+		border-t border-[#1a1a1a] bg-[#070707] px-6 lg:px-8
+		left-0 lg:left-64"
+>
+	<div class="flex gap-8 lg:gap-12">
+		<div class="flex items-center gap-3">
+			<div class="text-[9px] tracking-widest text-[#444] uppercase">PIPELINE_TOTAL</div>
+			<div class="text-[11px] text-white">
+				${pipelineTotal.toLocaleString('es', { maximumFractionDigits: 0 })}
+				<span class="text-[#444] text-[9px] ml-1">/ USD</span>
+			</div>
+		</div>
+		<div class="hidden items-center gap-3 sm:flex">
+			<div class="text-[9px] tracking-widest text-[#444] uppercase">CONVERSACIONES_HOY</div>
+			<div class="text-[11px] text-white">
+				{todayConvs}
+				<span class="text-[#444] text-[9px] ml-1">/ MSGS</span>
+			</div>
+		</div>
+	</div>
+
+	<div class="flex items-center gap-3">
+		<div class="hidden text-[9px] tracking-widest text-[#444] uppercase sm:block">
+			{tzOffset} // {timeStr}
+		</div>
+		<div class="flex gap-0.5">
+			<div class="h-3 w-1 bg-blue-500"></div>
+			<div class="h-3 w-1 bg-yellow-500"></div>
+			<div class="h-3 w-1 bg-white"></div>
+		</div>
+	</div>
+</footer>
