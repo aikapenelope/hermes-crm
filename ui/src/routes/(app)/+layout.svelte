@@ -17,16 +17,18 @@
 		{
 			label: 'MAIN // OPS',
 			items: [
-				{ href: '/',          label: 'DASHBOARD'  },
-				{ href: '/contacts',  label: 'CONTACTOS'  },
-				{ href: '/companies', label: 'EMPRESAS'   },
-				{ href: '/deals',     label: 'NEGOCIOS'   },
+				{ href: '/',           label: 'DASHBOARD'  },
+				{ href: '/contacts',   label: 'CONTACTOS'  },
+				{ href: '/companies',  label: 'EMPRESAS'   },
+				{ href: '/deals',      label: 'NEGOCIOS'   },
+				{ href: '/calendar',   label: 'CALENDARIO' },
 			],
 		},
 		{
 			label: 'ANALYTICS // MGMT',
 			items: [
 				{ href: '/tasks',    label: 'TAREAS'    },
+				{ href: '/goals',    label: 'METAS'     },
 				{ href: '/segments', label: 'SEGMENTOS' },
 				{ href: '/products', label: 'PRODUCTOS' },
 			],

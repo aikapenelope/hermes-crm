@@ -14,28 +14,26 @@
 	};
 
 	const stages = [
-		{ id: 'lead',        label: 'Lead',        color: 'bg-slate-500',   badge: 'slate'  },
-		{ id: 'qualified',   label: 'Calificado',  color: 'bg-blue-500',    badge: 'blue'   },
-		{ id: 'proposal',    label: 'Propuesta',   color: 'bg-amber-500',   badge: 'amber'  },
-		{ id: 'negotiation', label: 'Negociación', color: 'bg-orange-500',  badge: 'orange' },
-		{ id: 'won',         label: 'Ganado',      color: 'bg-emerald-500', badge: 'green'  },
-		{ id: 'lost',        label: 'Perdido',     color: 'bg-red-500',     badge: 'red'    },
+		{ id: 'lead',        label: 'LEAD',        dot: 'bg-[#555]'   },
+		{ id: 'qualified',   label: 'CALIFICADO',  dot: 'bg-blue-500' },
+		{ id: 'proposal',    label: 'PROPUESTA',   dot: 'bg-amber-500'},
+		{ id: 'negotiation', label: 'NEGOCIACIÓN', dot: 'bg-orange-500'},
+		{ id: 'won',         label: 'GANADO',      dot: 'bg-emerald-500'},
+		{ id: 'lost',        label: 'PERDIDO',     dot: 'bg-rose-600' },
 	] as const;
 
-	let deals   = $state<Deal[]>([]);
-	let loading = $state(true);
-
-	// Sheet
-	let sheetOpen   = $state(false);
-	let editingDeal = $state<Deal | null>(null);
-	let sheetStage  = $state('lead');
-
-	// Delete
+	let deals        = $state<Deal[]>([]);
+	let loading      = $state(true);
+	let sheetOpen    = $state(false);
+	let editingDeal  = $state<Deal | null>(null);
+	let sheetStage   = $state('lead');
 	let deleteTarget = $state<Deal | null>(null);
 	let deleting     = $state(false);
+	let savingId     = $state<string | null>(null); // API in-progress
 
-	// Moving
-	let movingId = $state<string | null>(null);
+	// ── Drag-and-drop state ───────────────────────────────────────────────────
+	let draggingDeal  = $state<Deal | null>(null);
+	let dragOverStage = $state<string | null>(null);
 
 	onMount(async () => {
 		try {
@@ -51,7 +49,6 @@
 	const byStage = $derived(
 		Object.fromEntries(stages.map(s => [s.id, deals.filter(d => d.stage === s.id)])) as Record<string, Deal[]>
 	);
-
 	const totalByStage = $derived(
 		Object.fromEntries(stages.map(s => [
 			s.id,
@@ -59,31 +56,27 @@
 		])) as Record<string, number>
 	);
 
-	function openCreate(stageId: string) {
-		editingDeal = null; sheetStage = stageId; sheetOpen = true;
-	}
-	function openEdit(deal: Deal) {
-		editingDeal = deal; sheetStage = deal.stage; sheetOpen = true;
-	}
+	function openCreate(stageId: string) { editingDeal = null; sheetStage = stageId; sheetOpen = true; }
+	function openEdit(deal: Deal) { editingDeal = deal; sheetStage = deal.stage; sheetOpen = true; }
 	function handleSaved(record: Record<string, unknown>) {
 		sheetOpen = false;
 		const d = record as unknown as Deal;
-		if (editingDeal) {
-			deals = deals.map(x => x.id === d.id ? { ...x, ...d } : x);
-		} else {
-			deals = [d, ...deals];
-		}
+		if (editingDeal) deals = deals.map(x => x.id === d.id ? { ...x, ...d } : x);
+		else              deals = [d, ...deals];
 	}
 
 	async function moveStage(deal: Deal, newStage: string) {
-		if (deal.stage === newStage) return;
-		movingId = deal.id;
+		if (deal.stage === newStage || savingId) return;
+		savingId = deal.id;
+		// Optimistic update — immediately reflect in UI
+		deals = deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d);
 		try {
 			await pb.collection('deals').update(deal.id, { stage: newStage });
-			deals = deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d);
 		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Error');
-		} finally { movingId = null; }
+			// Rollback on error
+			deals = deals.map(d => d.id === deal.id ? { ...d, stage: deal.stage } : d);
+			toast.error(e instanceof Error ? e.message : 'Error al mover negocio');
+		} finally { savingId = null; }
 	}
 
 	async function confirmDelete() {
@@ -99,11 +92,45 @@
 		} finally { deleting = false; }
 	}
 
+	// ── HTML5 Drag-and-Drop handlers ──────────────────────────────────────────
+	function onDragStart(e: DragEvent, deal: Deal) {
+		draggingDeal = deal;
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', deal.id);
+		}
+	}
+	function onDragEnd() {
+		draggingDeal  = null;
+		dragOverStage = null;
+	}
+	function onDragOver(e: DragEvent, stageId: string) {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		dragOverStage = stageId;
+	}
+	function onDragLeave(e: DragEvent) {
+		// Only clear if leaving the column, not entering a child element
+		const target = e.currentTarget as HTMLElement;
+		const related = e.relatedTarget as Node | null;
+		if (!related || !target.contains(related)) {
+			dragOverStage = null;
+		}
+	}
+	function onDrop(e: DragEvent, stageId: string) {
+		e.preventDefault();
+		dragOverStage = null;
+		if (draggingDeal && draggingDeal.stage !== stageId) {
+			moveStage(draggingDeal, stageId);
+		}
+		draggingDeal = null;
+	}
+
 	const currencySymbol: Record<string, string> = {
 		USD: '$', COP: 'COP$', EUR: '€', MXN: 'MX$', BRL: 'R$', ARS: 'AR$',
 	};
 	function fmt(v: number, c: string) {
-		return `${currencySymbol[c] ?? ''}${v?.toLocaleString() ?? 0}`;
+		return `${currencySymbol[c] ?? ''}${v?.toLocaleString('es', { maximumFractionDigits: 0 }) ?? 0}`;
 	}
 	function isOverdue(d: Deal) {
 		return d.expected_close && !['won','lost'].includes(d.stage) && new Date(d.expected_close) < new Date();
@@ -116,83 +143,121 @@
 
 <svelte:head><title>Negocios — Hermes CRM</title></svelte:head>
 
-<div class="flex h-full flex-col">
+<div class="flex h-full flex-col" style="font-size:11px;">
+
 	<!-- Header -->
-	<div class="flex shrink-0 items-center justify-between border-b border-slate-800 px-5 py-4">
+	<div class="flex shrink-0 items-center justify-between border-b border-[#1a1a1a] px-6 py-4
+		uppercase tracking-widest">
 		<div>
-			<h1>Negocios</h1>
-			<p class="mt-0.5 text-sm text-slate-400">{deals.length} negocios en el pipeline</p>
+			<div class="text-[10px] text-[#555]">PIPELINE // DEALS</div>
+			<div class="mt-0.5 font-sans text-lg font-bold text-white" style="letter-spacing:-0.02em; text-transform:none;">
+				{deals.length} negocios
+			</div>
 		</div>
-		<Btn variant="primary" onclick={() => openCreate('lead')}>
-			{#snippet icon()}<Plus class="h-4 w-4" />{/snippet}
-			Nuevo negocio
-		</Btn>
+		<button
+			onclick={() => openCreate('lead')}
+			class="flex items-center gap-2 bg-white px-5 py-2.5 text-[11px] font-bold tracking-widest text-black
+				hover:bg-[#ddd] transition-colors"
+		>
+			<Plus class="h-3.5 w-3.5" />
+			NUEVO NEGOCIO
+		</button>
 	</div>
 
 	{#if loading}
-		<div class="flex items-center gap-2 p-6 text-sm text-slate-400">
-			<div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-600 border-t-blue-500"></div>
-			Cargando pipeline…
+		<div class="flex items-center gap-2 p-6 text-[#555] uppercase tracking-widest text-[10px]">
+			<div class="h-3 w-3 animate-spin rounded-full border border-[#333] border-t-white"></div>
+			CARGANDO PIPELINE…
 		</div>
 	{:else}
+		<!-- Kanban board -->
 		<div class="flex-1 overflow-x-auto p-4">
 			<div class="flex h-full gap-3" style="min-width: max-content;">
 				{#each stages as stage}
-					{@const col = byStage[stage.id] ?? []}
+					{@const col   = byStage[stage.id] ?? []}
 					{@const total = totalByStage[stage.id] ?? 0}
+					{@const isDragTarget = dragOverStage === stage.id}
 
-					<div class="flex w-64 shrink-0 flex-col rounded-xl border border-slate-800 bg-slate-900/50">
+					<!-- Drop zone column -->
+					<div
+						class="flex w-60 shrink-0 flex-col border border-[#1a1a1a] bg-[#090909]
+							transition-all duration-150"
+						style={isDragTarget
+							? 'border-color: transparent; box-shadow: 0 0 0 1px transparent; outline: 1px solid; outline-color: #ff3333; background-image: linear-gradient(#090909, #090909), linear-gradient(to bottom, #ff3333, #ffaa00, #00ffaa, #00aaff, #aa00ff); background-origin: border-box; background-clip: padding-box, border-box; border-radius:0;'
+							: ''}
+						ondragover={(e) => onDragOver(e, stage.id)}
+						ondragleave={onDragLeave}
+						ondrop={(e) => onDrop(e, stage.id)}
+						role="list"
+						aria-label="Columna {stage.label}"
+					>
 						<!-- Column header -->
-						<div class="flex items-center gap-2 border-b border-slate-800 px-3 py-2.5">
-							<div class="h-2 w-2 rounded-full {stage.color}"></div>
-							<span class="flex-1 text-sm font-medium text-slate-200">{stage.label}</span>
-							<span class="text-xs text-slate-500">{col.length}</span>
+						<div class="flex items-center gap-2 border-b border-[#1a1a1a] px-3 py-2.5 uppercase tracking-widest">
+							<div class="h-1.5 w-1.5 rounded-full {stage.dot}"></div>
+							<span class="flex-1 text-[10px] text-[#888]">{stage.label}</span>
+							<span class="text-[9px] text-[#444]">{col.length}</span>
 							<button
 								onclick={() => openCreate(stage.id)}
-								class="rounded p-0.5 text-slate-500 hover:bg-slate-700 hover:text-slate-300 transition-colors"
+								class="text-[#444] hover:text-white transition-colors"
 								title="Nuevo negocio en {stage.label}"
 							>
-								<Plus class="h-3.5 w-3.5" />
+								<Plus class="h-3 w-3" />
 							</button>
 						</div>
 
+						<!-- Stage total -->
 						{#if total > 0}
-							<div class="border-b border-slate-800/50 px-3 py-1.5">
-								<span class="text-xs font-semibold text-emerald-400">
+							<div class="border-b border-[#111] px-3 py-1.5 uppercase tracking-widest">
+								<span class="text-[9px] font-bold text-emerald-500">
 									{col[0]?.currency ? fmt(total, col[0].currency) : total.toLocaleString()}
 								</span>
 							</div>
 						{/if}
 
 						<!-- Cards -->
-						<div class="flex-1 space-y-2 overflow-y-auto p-2">
+						<div class="flex-1 space-y-1.5 overflow-y-auto p-2">
 							{#if col.length === 0}
-								<button
-									onclick={() => openCreate(stage.id)}
-									class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-700 py-4 text-xs text-slate-600 hover:border-slate-600 hover:text-slate-400 transition-colors"
-								>
-									<Plus class="h-3 w-3" /> Añadir
-								</button>
+								<!-- Empty column drop hint -->
+								<div class="flex h-16 items-center justify-center border border-dashed border-[#1a1a1a]
+									text-[9px] uppercase tracking-widest text-[#333] transition-colors
+									{isDragTarget ? 'border-[#555] text-[#555]' : ''}">
+									{isDragTarget ? 'SOLTAR AQUÍ' : 'VACÍO'}
+								</div>
 							{:else}
 								{#each col as deal (deal.id)}
-									<div class="group rounded-lg border border-slate-700/60 bg-slate-900 p-3 transition-all hover:border-slate-600 hover:shadow-md
-										{movingId === deal.id ? 'opacity-40 pointer-events-none' : ''}">
-
-										<!-- Title + actions -->
-										<div class="mb-1.5 flex items-start gap-1">
-											<p class="flex-1 text-sm font-medium leading-snug text-slate-100">{deal.title}</p>
-											<div class="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+									<!-- Draggable card -->
+									<div
+										draggable="true"
+										ondragstart={(e) => onDragStart(e, deal)}
+										ondragend={onDragEnd}
+										class="group cursor-grab border border-[#1a1a1a] bg-[#0d0d0d] p-3
+											transition-all duration-150 active:cursor-grabbing
+											{draggingDeal?.id === deal.id ? 'opacity-30 scale-95' : ''}
+											{savingId === deal.id ? 'opacity-50 pointer-events-none' : ''}
+											hover:border-[#333] hover:bg-[#111]"
+										role="listitem"
+									>
+										<!-- Title row -->
+										<div class="mb-2 flex items-start justify-between gap-1">
+											<p class="flex-1 normal-case font-medium leading-snug text-[12px] text-white"
+												style="letter-spacing:0;">
+												{deal.title}
+											</p>
+											<!-- Actions (hover only, not shown while dragging) -->
+											<div class="flex shrink-0 gap-0.5 opacity-0 transition-opacity
+												group-hover:opacity-100
+												{draggingDeal ? 'opacity-0 pointer-events-none' : ''}">
 												<button
 													onclick={() => openEdit(deal)}
-													class="rounded p-1 text-slate-500 hover:bg-slate-700 hover:text-slate-200"
+													class="border border-[#1a1a1a] p-1 text-[#444] hover:text-white hover:border-[#333] transition-colors"
 												>
-													<Pencil class="h-3 w-3" />
+													<Pencil class="h-2.5 w-2.5" />
 												</button>
 												<button
 													onclick={() => { deleteTarget = deal; }}
-													class="rounded p-1 text-slate-500 hover:bg-red-900/40 hover:text-red-400"
+													class="border border-[#1a1a1a] p-1 text-[#444] hover:text-rose-500 hover:border-rose-900 transition-colors"
 												>
-													<Trash2 class="h-3 w-3" />
+													<Trash2 class="h-2.5 w-2.5" />
 												</button>
 											</div>
 										</div>
@@ -201,33 +266,35 @@
 										{#if deal.expand?.contact}
 											<a
 												href="/contacts/{deal.expand.contact.id}"
-												class="mb-2 block truncate text-xs text-blue-400 hover:text-blue-300"
+												onclick={(e) => e.stopPropagation()}
+												class="mb-2 block truncate uppercase text-[8px] tracking-widest text-blue-600 hover:text-blue-400 transition-colors"
 											>
 												{deal.expand.contact.name || deal.expand.contact.email}
 											</a>
 										{/if}
 
-										<!-- Value + close date -->
-										<div class="flex items-center justify-between">
+										<!-- Value + date -->
+										<div class="flex items-center justify-between uppercase tracking-widest">
 											{#if deal.value}
-												<span class="text-xs font-semibold text-emerald-400">
+												<span class="text-[9px] font-bold text-emerald-500">
 													{fmt(deal.value, deal.currency)}
 												</span>
 											{:else}
 												<span></span>
 											{/if}
 											{#if deal.expected_close}
-												<span class="text-xs {isOverdue(deal) ? 'font-medium text-rose-400' : 'text-slate-500'}">
+												<span class="text-[8px] {isOverdue(deal) ? 'text-rose-500' : 'text-[#444]'}">
 													{deal.expected_close.slice(0, 10)}
 												</span>
 											{/if}
 										</div>
 
-										<!-- Move to next stage -->
-										{#if nextStageId(deal.stage) !== null}
+										<!-- Quick move button (next stage only) -->
+										{#if nextStageId(deal.stage) && !draggingDeal}
 											<button
 												onclick={() => moveStage(deal, nextStageId(deal.stage)!)}
-												class="mt-2 w-full rounded border border-slate-700 py-1 text-xs text-slate-500 transition-colors hover:border-slate-500 hover:text-slate-300"
+												class="mt-2 w-full border border-[#1a1a1a] py-1 text-[8px] uppercase tracking-widest
+													text-[#444] transition-colors hover:border-[#333] hover:text-[#888]"
 											>
 												→ {stages.find(s => s.id === nextStageId(deal.stage))?.label}
 											</button>
@@ -241,9 +308,15 @@
 			</div>
 		</div>
 	{/if}
+
+	<!-- DnD instructions -->
+	{#if !loading && deals.length > 0}
+		<div class="shrink-0 border-t border-[#1a1a1a] px-6 py-2 text-[8px] uppercase tracking-widest text-[#333]">
+			DRAG & DROP — arrastra las tarjetas entre columnas para cambiar etapa
+		</div>
+	{/if}
 </div>
 
-<!-- Create / Edit Sheet -->
 <Sheet
 	open={sheetOpen}
 	title={editingDeal ? 'Editar negocio' : 'Nuevo negocio'}
@@ -260,7 +333,6 @@
 	{/snippet}
 </Sheet>
 
-<!-- Delete Modal -->
 <Modal
 	open={!!deleteTarget}
 	title="Eliminar negocio"
