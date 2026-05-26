@@ -1,0 +1,159 @@
+# =============================================================================
+# hermes-crm — Standalone deployment (any VPS)
+#
+# Works on any server with Docker + Docker Compose installed.
+# No Traefik, no Coolify, no Martes infrastructure required.
+#
+# Quick start:
+#   1. cp .env.example .env
+#   2. Edit .env with your credentials
+#   3. docker compose up -d
+#   4. Open http://<server-ip>:8090
+#
+# For HTTPS production, use the 'with-caddy' profile:
+#   DOMAIN=crm.mycompany.com docker compose --profile with-caddy up -d
+#
+# Image: ghcr.io/aikapenelope/hermes-crm:latest
+# Built automatically by GitHub Actions on every push to main.
+# =============================================================================
+
+services:
+
+  # ── hermes-crm: PocketBase CRM ────────────────────────────────────────────
+  # Single container: PocketBase binary + SvelteKit SPA + migrations.
+  # - Serves the web app at /       (same origin as API — no CORS)
+  # - REST API at /api/
+  # - Admin panel at /_/            (restrict with PB_ADMIN_IPS)
+  # - Hermes MCP connects via:      http://crm:8090  (Docker DNS, internal)
+  #   or                            http://localhost:8090  (if Hermes runs on host)
+  crm:
+    image: ghcr.io/aikapenelope/hermes-crm:latest
+    # Uncomment to build locally instead of pulling from registry:
+    # build: .
+    container_name: hermes-crm
+    restart: unless-stopped
+
+    ports:
+      # Direct HTTP access — suitable for:
+      #   - Local development
+      #   - Internal networks (office VPN, Tailscale)
+      #   - Behind a reverse proxy that handles SSL termination
+      #
+      # Remove this and use the 'with-caddy' profile for automatic HTTPS.
+      - "${CRM_PORT:-8090}:8090"
+
+    volumes:
+      # Persistent data: SQLite database, uploaded files, request logs.
+      # IMPORTANT: back up this directory regularly.
+      - crm-data:/pb/pb_data
+
+    environment:
+      # ── Actor 1: Hermes MCP superuser ──────────────────────────────────
+      # Used by gaspechak-pocketbase-mcp to read/write CRM data.
+      # Never used to log into the web UI.
+      PB_SUPERUSER_EMAIL:    ${PB_SUPERUSER_EMAIL:?PB_SUPERUSER_EMAIL is required}
+      PB_SUPERUSER_PASSWORD: ${PB_SUPERUSER_PASSWORD:?PB_SUPERUSER_PASSWORD is required}
+
+      # ── Actor 2: Business owner (web UI login) ──────────────────────────
+      # The human who logs into the CRM at http://<host>:8090
+      PB_USER_EMAIL:    ${PB_USER_EMAIL:?PB_USER_EMAIL is required}
+      PB_USER_PASSWORD: ${PB_USER_PASSWORD:?PB_USER_PASSWORD is required}
+
+      # ── Admin panel protection (strongly recommended) ───────────────────
+      # Restricts /_/ to these IPs only. Works without any reverse proxy.
+      # Examples:
+      #   Local only:         127.0.0.1
+      #   Home IP:            127.0.0.1 1.2.3.4
+      #   Tailscale:          127.0.0.1 100.64.0.0/10
+      PB_ADMIN_IPS: ${PB_ADMIN_IPS:-}
+
+      # ── At-rest encryption (optional) ───────────────────────────────────
+      # Encrypts the SQLite database and uploaded files.
+      # Generate: openssl rand -hex 16
+      # WARNING: if lost, data is unrecoverable. Store securely (e.g. a password manager).
+      PB_ENCRYPTION_KEY: ${PB_ENCRYPTION_KEY:-}
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+    # Place on the same network as Hermes if running Hermes in Docker.
+    # Hermes can then reach PocketBase at http://crm:8090
+    networks:
+      - crm-internal
+
+  # ── caddy: Automatic HTTPS (optional, --profile with-caddy) ───────────────
+  # Provides automatic TLS certificates via Let's Encrypt.
+  # Requires a real domain name pointing to this server.
+  #
+  # Usage:
+  #   DOMAIN=crm.mycompany.com docker compose --profile with-caddy up -d
+  #
+  # After starting, the CRM is available at https://crm.mycompany.com
+  # with automatic HTTP→HTTPS redirect.
+  caddy:
+    image: caddy:2-alpine
+    profiles: [with-caddy]
+    container_name: hermes-crm-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required when using the with-caddy profile}
+    volumes:
+      - caddy-data:   /data
+      - caddy-config: /config
+    # Inline Caddyfile — proxies HTTPS to the CRM container on port 8090
+    command: >
+      caddy reverse-proxy
+        --from ${DOMAIN}
+        --to crm:8090
+    networks:
+      - crm-internal
+    depends_on:
+      crm:
+        condition: service_healthy
+
+# ── Hermes (optional) ────────────────────────────────────────────────────────
+# If you run Hermes in Docker on the same server, add it to the crm-internal
+# network so it can reach PocketBase at http://crm:8090.
+#
+# Uncomment and adjust to your Hermes setup:
+#
+# hermes:
+#   image: nousresearch/hermes-agent:latest
+#   container_name: hermes
+#   restart: unless-stopped
+#   volumes:
+#     - ./hermes-data:/opt/data
+#   environment:
+#     OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+#     TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+#     TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS}
+#     # MCP connects to the crm service by Docker DNS name:
+#     POCKETBASE_URL: http://crm:8090
+#     PB_HERMES_PASSWORD: ${PB_SUPERUSER_PASSWORD}
+#   networks:
+#     - crm-internal
+#   depends_on:
+#     crm:
+#       condition: service_healthy
+
+networks:
+  crm-internal:
+    # Isolated bridge network. Only services in this compose file
+    # (and any external containers you manually connect) can reach the CRM.
+    driver: bridge
+
+volumes:
+  crm-data:
+    # Named volume managed by Docker. Location: /var/lib/docker/volumes/
+    # To back up: docker run --rm -v crm-data:/data -v $(pwd):/backup \
+    #               alpine tar czf /backup/crm-backup-$(date +%Y%m%d).tar.gz /data
+  caddy-data:
+  caddy-config:
