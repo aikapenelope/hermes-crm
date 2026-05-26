@@ -2,13 +2,12 @@
 	import { onMount } from 'svelte';
 	import pb from '$lib/pb';
 	import { Btn, Badge, Skeleton } from '$lib/ui';
-	import { Users, Briefcase, CheckSquare, MessageCircle, TrendingUp, ArrowRight } from 'lucide-svelte';
+	import { Users, Briefcase, CheckSquare, TrendingUp, ArrowRight } from 'lucide-svelte';
 
 	interface Stats {
 		contacts: number;
 		openDeals: number;
 		dueTasks: number;
-		todayConversations: number;
 		wonDealsValue: number;
 	}
 
@@ -19,16 +18,13 @@
 	onMount(async () => {
 		const today = new Date().toISOString().slice(0, 10);
 		try {
-			const [c, d, t, conv, won, recent] = await Promise.all([
+			const [c, d, t, won, recent] = await Promise.all([
 				pb.collection('contacts').getList(1, 1),
 				pb.collection('deals').getList(1, 1, {
 					filter: "stage != 'won' && stage != 'lost'",
 				}),
 				pb.collection('tasks').getList(1, 1, {
 					filter: `status != 'done' && due_date != '' && due_date <= '${today} 23:59:59'`,
-				}),
-				pb.collection('conversations').getList(1, 1, {
-					filter: `created >= '${today} 00:00:00'`,
 				}),
 				pb.collection('deals').getFullList({
 					filter: "stage = 'won'",
@@ -44,7 +40,6 @@
 				contacts: c.totalItems,
 				openDeals: d.totalItems,
 				dueTasks: t.totalItems,
-				todayConversations: conv.totalItems,
 				wonDealsValue: won.reduce((sum, r) => sum + (((r as unknown) as { value: number }).value ?? 0), 0),
 			};
 			recentContacts = recent.items as Record<string, unknown>[];
@@ -83,15 +78,6 @@
 						iconBg: 'bg-rose-600/20',
 						iconColor: 'text-rose-400',
 					},
-					{
-						label: 'Mensajes hoy',
-						value: stats.todayConversations,
-						href: '/conversations',
-						Icon: MessageCircle,
-						gradient: 'from-emerald-600/20 to-emerald-600/5',
-						iconBg: 'bg-emerald-600/20',
-						iconColor: 'text-emerald-400',
-					},
 				]
 			: []
 	);
@@ -113,8 +99,8 @@
 		<Skeleton rows={4} class="mb-6" />
 		<Skeleton rows={6} />
 	{:else}
-		<!-- Stat cards -->
-		<div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+		<!-- Stat cards — 3 columns -->
+		<div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
 			{#each statCards as card}
 				<a
 					href={card.href}
@@ -168,9 +154,9 @@
 			{#if recentContacts.length === 0}
 				<div class="px-4 py-10 text-center">
 					<p class="text-sm text-slate-500 mb-3">Sin contactos aún</p>
-					<Btn variant="primary" size="sm" onclick={() => {}}>
-						<a href="/contacts">Crear primer contacto</a>
-					</Btn>
+					<a href="/contacts">
+						<Btn variant="primary" size="sm">Crear primer contacto</Btn>
+					</a>
 				</div>
 			{:else}
 				<ul class="divide-y divide-slate-800">

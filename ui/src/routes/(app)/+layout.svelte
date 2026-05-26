@@ -7,7 +7,7 @@
 	import { currentUser } from '$lib/stores';
 	import {
 		LayoutDashboard, Users, Building2, Briefcase,
-		MessageCircle, CheckSquare, Package, BarChart2,
+		CheckSquare, Package, BarChart2,
 		LogOut, Menu, X,
 	} from 'lucide-svelte';
 
@@ -19,14 +19,13 @@
 	afterNavigate(() => { sidebarOpen = false; });
 
 	const nav = [
-		{ href: '/',              label: 'Dashboard',      Icon: LayoutDashboard },
-		{ href: '/contacts',      label: 'Contactos',      Icon: Users           },
-		{ href: '/companies',     label: 'Empresas',       Icon: Building2       },
-		{ href: '/deals',         label: 'Negocios',       Icon: Briefcase       },
-		{ href: '/conversations', label: 'Conversaciones', Icon: MessageCircle   },
-		{ href: '/tasks',         label: 'Tareas',         Icon: CheckSquare     },
-		{ href: '/products',      label: 'Productos',      Icon: Package         },
-		{ href: '/segments',      label: 'Segmentos',      Icon: BarChart2       },
+		{ href: '/',          label: 'Dashboard',  Icon: LayoutDashboard },
+		{ href: '/contacts',  label: 'Contactos',  Icon: Users           },
+		{ href: '/companies', label: 'Empresas',   Icon: Building2       },
+		{ href: '/deals',     label: 'Negocios',   Icon: Briefcase       },
+		{ href: '/tasks',     label: 'Tareas',     Icon: CheckSquare     },
+		{ href: '/products',  label: 'Productos',  Icon: Package         },
+		{ href: '/segments',  label: 'Segmentos',  Icon: BarChart2       },
 	];
 
 	function isActive(href: string) {

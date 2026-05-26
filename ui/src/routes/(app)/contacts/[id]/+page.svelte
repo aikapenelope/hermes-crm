@@ -1,31 +1,28 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import pb from '$lib/pb';
 	import { toast } from '$lib/stores';
 	import { Sheet, Modal, Btn, Badge, Skeleton } from '$lib/ui';
 	import ContactForm from '$lib/forms/ContactForm.svelte';
 	import {
-		ArrowLeft, Phone, Mail, Globe, Pencil, Trash2, MessageCircle,
+		ArrowLeft, Phone, Mail, Pencil, Trash2,
 		Link, Send,
 	} from 'lucide-svelte';
-	import type { UnsubscribeFunc } from 'pocketbase';
 
 	const contactId = $derived($page.params.id ?? '');
 
 	type Contact = Record<string, unknown>;
-	type Conversation = { id: string; contact: string; direction: string; channel: string; content: string; created: string };
 	type Deal = { id: string; title: string; value: number; currency: string; stage: string };
 	type Task = { id: string; title: string; status: string; priority: string; due_date: string };
 	type Note = { id: string; content: string; created: string; expand?: { created_by?: { name: string } } };
 
-	let contact       = $state<Contact | null>(null);
-	let conversations = $state<Conversation[]>([]);
-	let deals         = $state<Deal[]>([]);
-	let tasks         = $state<Task[]>([]);
-	let notes         = $state<Note[]>([]);
-	let loading       = $state(true);
+	let contact = $state<Contact | null>(null);
+	let deals   = $state<Deal[]>([]);
+	let tasks   = $state<Task[]>([]);
+	let notes   = $state<Note[]>([]);
+	let loading = $state(true);
 
 	// Sheet
 	let editOpen  = $state(false);
@@ -38,16 +35,10 @@
 	let noteContent = $state('');
 	let savingNote  = $state(false);
 
-	let unsubConversations: UnsubscribeFunc | null = null;
-
 	onMount(async () => {
 		try {
-			const [c, convs, d, t, n] = await Promise.all([
+			const [c, d, t, n] = await Promise.all([
 				pb.collection('contacts').getOne(contactId, { expand: 'company' }),
-				pb.collection('conversations').getList<Conversation>(1, 30, {
-					filter: `contact = '${contactId}'`,
-					sort: '-created',
-				}),
 				pb.collection('deals').getList<Deal>(1, 10, {
 					filter: `contact = '${contactId}'`,
 					sort: '-created',
@@ -65,23 +56,13 @@
 				}),
 			]);
 			contact = c as Contact;
-			conversations = convs.items;
-			deals = d.items;
-			tasks = t.items;
-			notes = n.items;
-
-			unsubConversations = await pb.collection('conversations').subscribe('*', (e) => {
-				const rec = e.record as unknown as Conversation;
-				if (rec.contact === contactId && e.action === 'create') {
-					conversations = [rec, ...conversations].slice(0, 30);
-				}
-			});
+			deals   = d.items;
+			tasks   = t.items;
+			notes   = n.items;
 		} catch (e: unknown) {
 			toast.error(e instanceof Error ? e.message : 'Error al cargar contacto');
 		} finally { loading = false; }
 	});
-
-	onDestroy(() => { unsubConversations?.(); });
 
 	async function refreshContact() {
 		contact = await pb.collection('contacts').getOne(contactId, { expand: 'company' }) as Contact;
@@ -133,9 +114,6 @@
 		lead: 'Lead', qualified: 'Calificado', proposal: 'Propuesta',
 		negotiation: 'Negociación', won: 'Ganado', lost: 'Perdido',
 	};
-	const channelIcons: Record<string, string> = {
-		whatsapp: '💬', telegram: '✈️', email: '📧', web: '🌐',
-	};
 	const priorityColor: Record<string, string> = {
 		low: 'text-slate-400', medium: 'text-blue-400',
 		high: 'text-amber-400', urgent: 'text-rose-400',
@@ -174,11 +152,10 @@
 		<Skeleton rows={8} />
 	{:else if contact}
 		<div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
-			<!-- ── Left column: info + deals + tasks ───────────────────────── -->
+			<!-- ── Left column: info + deals + tasks ─────────────────── -->
 			<div class="space-y-4">
 				<!-- Contact card -->
 				<div class="rounded-xl border border-slate-800 bg-slate-900 p-5">
-					<!-- Avatar + name -->
 					<div class="mb-4 flex items-center gap-3">
 						<div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-600/50 to-violet-600/50 text-lg font-bold text-slate-200">
 							{String(contact.name ?? contact.email ?? '?')[0].toUpperCase()}
@@ -270,9 +247,8 @@
 				</div>
 			</div>
 
-			<!-- ── Right column: conversations + notes ─────────────────────── -->
-			<div class="flex flex-col gap-5 lg:col-span-2">
-				<!-- Notes -->
+			<!-- ── Right column: notes (full width) ──────────────────── -->
+			<div class="lg:col-span-2">
 				<div class="rounded-xl border border-slate-800 bg-slate-900">
 					<h2 class="border-b border-slate-800 px-4 py-3 text-sm font-semibold text-slate-200">
 						Notas ({notes.length})
@@ -294,9 +270,9 @@
 					</div>
 					<!-- Notes list -->
 					{#if notes.length === 0}
-						<p class="px-4 py-4 text-xs text-slate-500">Sin notas — las notas del equipo aparecen aquí</p>
+						<p class="px-4 py-4 text-xs text-slate-500">Sin notas — añade contexto sobre este contacto</p>
 					{:else}
-						<ul class="divide-y divide-slate-800 max-h-64 overflow-y-auto">
+						<ul class="divide-y divide-slate-800 max-h-[32rem] overflow-y-auto">
 							{#each notes as note (note.id)}
 								<li class="group flex items-start gap-2 px-4 py-3">
 									<p class="flex-1 text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{note.content}</p>
@@ -309,35 +285,6 @@
 											<Trash2 class="h-3 w-3" />
 										</button>
 									</div>
-								</li>
-							{/each}
-						</ul>
-					{/if}
-				</div>
-
-				<!-- Conversations -->
-				<div class="flex flex-1 flex-col rounded-xl border border-slate-800 bg-slate-900">
-					<div class="flex items-center gap-2 border-b border-slate-800 px-4 py-3">
-						<MessageCircle class="h-4 w-4 text-slate-400" />
-						<h2 class="text-sm font-semibold text-slate-200">Conversaciones</h2>
-						<span class="ml-auto text-xs text-slate-500">{conversations.length} msgs</span>
-					</div>
-					{#if conversations.length === 0}
-						<div class="flex flex-1 items-center justify-center p-8 text-sm text-slate-500">
-							Hermes registrará automáticamente cada mensaje aquí
-						</div>
-					{:else}
-						<ul class="flex-1 divide-y divide-slate-800 overflow-y-auto max-h-96">
-							{#each conversations as conv (conv.id)}
-								<li class="px-4 py-3">
-									<div class="mb-1 flex items-center gap-2">
-										<span class="text-sm">{channelIcons[conv.channel] ?? '💬'}</span>
-										<span class="text-xs font-medium {conv.direction === 'inbound' ? 'text-blue-400' : 'text-emerald-400'}">
-											{conv.direction === 'inbound' ? '↙ Entrante' : '↗ Hermes'}
-										</span>
-										<span class="ml-auto text-xs text-slate-600">{formatDate(conv.created)}</span>
-									</div>
-									<p class="text-sm text-slate-300 leading-relaxed">{conv.content}</p>
 								</li>
 							{/each}
 						</ul>
