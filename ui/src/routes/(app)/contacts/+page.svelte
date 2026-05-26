@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import pb from '$lib/pb';
 	import { toast } from '$lib/stores';
+	import { sanitizeSearch } from '$lib/utils';
 	import { Sheet, Modal, Btn, Badge, Skeleton, Empty } from '$lib/ui';
 	import ContactForm from '$lib/forms/ContactForm.svelte';
 	import { UserPlus, Search, Pencil, Trash2, Users } from 'lucide-svelte';
@@ -40,7 +41,10 @@
 		try {
 			const filters: string[] = [];
 			if (search.trim()) {
-				filters.push(`(name ~ '${search}' || email ~ '${search}' || phone ~ '${search}')`);
+				// sanitizeSearch escapes \ and ' to prevent PocketBase filter injection.
+				// See: https://pocketbase.io/docs/api-rules-and-filters/
+				const q = sanitizeSearch(search);
+				filters.push(`(name ~ '${q}' || email ~ '${q}' || phone ~ '${q}')`);
 			}
 			if (filterStatus) filters.push(`status = '${filterStatus}'`);
 			result = await pb.collection('contacts').getList<Contact>(page, perPage, {
