@@ -102,18 +102,30 @@ on first container start. To add fields or collections later, create `2_<name>.j
 
 ### Hermes MCP integration
 
-Add to `/root/.hermes/config.yaml`:
+> **Updated:** The recommended package is `gaspechak-pocketbase-mcp@2.0.1` (May 2026).
+> The previously documented `pocketbase-mcp-server` package has different environment
+> variable names and is no longer maintained. See `hermes-config/` for full docs.
+
+Add to the tenant's `config.yaml` (e.g. `/var/lib/martes/tenants/t001/config.yaml`):
 
 ```yaml
 mcp_servers:
-  pocketbase:
+  crm:
     command: npx
-    args: ["-y", "pocketbase-mcp-server"]
+    args: ["-y", "gaspechak-pocketbase-mcp@2.0.1"]
     env:
-      POCKETBASE_URL: "http://localhost:8090"
-      POCKETBASE_SUPERUSER_EMAIL: "admin@aikalabs.cc"
-      POCKETBASE_SUPERUSER_PASSWORD: "${PB_SUPERUSER_PASSWORD}"
+      PB_URL: "http://pb-t001:8090"        # Docker DNS — replace t001 with tenant code
+      PB_EMAIL: "hermes@internal"           # standardized superuser email
+      PB_PASSWORD: "${PB_HERMES_PASSWORD}"  # from tenant .env
+    timeout: 60
+    connect_timeout: 30
 ```
+
+See [`hermes-config/README.md`](hermes-config/README.md) for:
+- Full setup instructions (sidecar container, .env, SOUL.md snippet)
+- Package comparison table and rationale
+- Security model explanation
+- Available tools reference (16 tools)
 
 Hermes can then: query contacts, create deals, update task status, read segments,
 manage collections — all via natural language.
