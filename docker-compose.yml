@@ -60,12 +60,18 @@ services:
       PB_USER_PASSWORD: ${PB_USER_PASSWORD:?PB_USER_PASSWORD is required}
 
       # ── Admin panel protection (strongly recommended) ───────────────────
-      # Restricts /_/ to these IPs only. Works without any reverse proxy.
+      # Restricts /_/ and the superuser auth API to these IPs only.
+      #
+      # If Hermes runs in Docker on the same host:
+      #   Add 172.16.0.0/12 (Docker bridge CGNAT range) so the Hermes
+      #   container (172.17.x.x) can reach the superuser API.
+      #   Without it, gaspechak-pocketbase-mcp gets 403 on every auth attempt.
       # Examples:
       #   Local only:         127.0.0.1
       #   Home IP:            127.0.0.1 1.2.3.4
       #   Tailscale:          127.0.0.1 100.64.0.0/10
-      PB_ADMIN_IPS: ${PB_ADMIN_IPS:-}
+      #   Tailscale + Docker: 127.0.0.1 100.64.0.0/10 172.16.0.0/12  ← recommended
+      PB_ADMIN_IPS: ${PB_ADMIN_IPS:-127.0.0.1 172.16.0.0/12}
 
       # ── At-rest encryption (optional) ───────────────────────────────────
       # Encrypts the SQLite database and uploaded files.

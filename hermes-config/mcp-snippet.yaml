@@ -29,9 +29,10 @@ mcp_servers:
       # Example: PB_URL: "http://pb-t001:8090"
       PB_URL: "http://pb-{tenant_code}:8090"
 
-      # Standardized superuser email. Safe to use the same value across all
-      # tenants — each tenant has its own isolated PocketBase instance.
-      PB_EMAIL: "hermes@internal"
+      # Standardized superuser email.
+      # ⚠️  PocketBase v0.38+ rejects "hermes@internal" (no TLD).
+      #     Use a valid email: hermes@crm.internal or hermes@yourdomain.com
+      PB_EMAIL: "hermes@crm.internal"
 
       # Injected from the tenant .env file. Generate with:
       #   openssl rand -hex 32
