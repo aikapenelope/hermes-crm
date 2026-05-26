@@ -153,6 +153,38 @@
 			? `${String(selectedDate.getDate()).padStart(2,'0')}.${String(selectedDate.getMonth()+1).padStart(2,'0')}.${selectedDate.getFullYear()}`
 			: null
 	);
+
+	// ── View mode: month grid or agenda list ──────────────────────────────────
+	let calView: 'month' | 'agenda' = $state('month');
+
+	// ── Agenda: tasks in the actual month (not the grid padding) ─────────────
+	const agendaTasks = $derived(() =>
+		tasks
+			.filter(t => {
+				if (!t.due_date) return false;
+				const d = new Date(t.due_date);
+				return d.getFullYear() === viewYear && d.getMonth() === viewMonth;
+			})
+			.sort((a, b) => a.due_date.localeCompare(b.due_date))
+	);
+
+	// Group by date for agenda display
+	const agendaGrouped = $derived(() => {
+		const groups: { dateKey: string; label: string; tasks: Task[] }[] = [];
+		const seen = new Set<string>();
+		for (const t of agendaTasks()) {
+			const dk = t.due_date.slice(0, 10);
+			if (!seen.has(dk)) {
+				seen.add(dk);
+				const d = new Date(dk + 'T00:00:00');
+				const label = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth()+1).padStart(2, '0')} — ${
+					['DOM','LUN','MAR','MIE','JUE','VIE','SAB'][d.getDay()]}`;
+				groups.push({ dateKey: dk, label, tasks: [] });
+			}
+			groups.find(g => g.dateKey === dk)!.tasks.push(t);
+		}
+		return groups;
+	});
 </script>
 
 <svelte:head><title>Calendario — Hermes CRM</title></svelte:head>
@@ -162,30 +194,106 @@
 	<!-- ══════════════════════════════════════════════════════════════════════ -->
 	<!-- HEADER                                                                 -->
 	<!-- ══════════════════════════════════════════════════════════════════════ -->
-	<div class="mb-8 flex items-center justify-between">
+	<div class="mb-8 flex flex-wrap items-center justify-between gap-4">
 		<div>
-			<div class="text-[10px] tracking-widest text-[#555]">CALENDAR // AGENDA</div>
+			<div class="text-[10px] tracking-widest text-[#555]">CALENDAR // {calView === 'month' ? 'MONTH' : 'AGENDA'}</div>
 			<div class="mt-1 font-sans text-xl font-bold text-white" style="letter-spacing:-0.02em; text-transform:none;">
 				{MONTH_NAMES[viewMonth]} {viewYear}
 			</div>
 		</div>
-		<div class="flex items-center gap-2">
-			<button
-				onclick={goToday}
+		<div class="flex flex-wrap items-center gap-2">
+			<!-- View toggle -->
+			<div class="flex border border-[#222]">
+				<button onclick={() => { calView = 'month'; }}
+					class="px-3 py-1.5 text-[9px] tracking-widest uppercase transition-colors
+						{calView === 'month' ? 'bg-white text-black' : 'text-[#555] hover:text-white'}"
+				>MES</button>
+				<button onclick={() => { calView = 'agenda'; }}
+					class="border-l border-[#222] px-3 py-1.5 text-[9px] tracking-widest uppercase transition-colors
+						{calView === 'agenda' ? 'bg-white text-black' : 'text-[#555] hover:text-white'}"
+				>AGENDA</button>
+			</div>
+			<button onclick={goToday}
 				class="border border-[#333] px-3 py-1.5 text-[10px] tracking-widest text-[#888]
 					hover:border-[#555] hover:text-white transition-colors"
 			>HOY</button>
-			<button
-				onclick={prevMonth}
+			<button onclick={prevMonth}
 				class="border border-[#1a1a1a] px-3 py-1.5 text-[#888] hover:text-white hover:border-[#333] transition-colors"
 			>←</button>
-			<button
-				onclick={nextMonth}
+			<button onclick={nextMonth}
 				class="border border-[#1a1a1a] px-3 py-1.5 text-[#888] hover:text-white hover:border-[#333] transition-colors"
 			>→</button>
 		</div>
 	</div>
 
+	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	<!-- AGENDA VIEW                                                           -->
+	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	{#if calView === 'agenda'}
+		{#if loading}
+			<div class="text-[10px] text-[#444] tracking-widest">CARGANDO…</div>
+		{:else if agendaGrouped().length === 0}
+			<div class="border border-[#1a1a1a] bg-[#090909] px-6 py-14 text-center text-[9px] tracking-widest text-[#333] uppercase">
+				SIN_TAREAS — {MONTH_NAMES[viewMonth]} {viewYear}
+			</div>
+		{:else}
+			<div class="space-y-1">
+				{#each agendaGrouped() as group}
+					<div class="flex items-center gap-3 py-2">
+						<div class="text-[10px] tracking-widest text-white uppercase">{group.label}</div>
+						<div class="flex-1 border-t border-[#1a1a1a]"></div>
+						<div class="text-[9px] text-[#444]">{group.tasks.length} tarea{group.tasks.length !== 1 ? 's' : ''}</div>
+					</div>
+					{#each group.tasks as task (task.id)}
+						<a href="/tasks"
+							class="flex items-center gap-3 border border-[#1a1a1a] bg-[#090909] px-4 py-3
+								transition-colors hover:border-[#333] hover:bg-[#0d0d0d]
+								{['done','cancelled'].includes(task.status) ? 'opacity-40' : ''}">
+							<div class="h-2 w-2 shrink-0 rounded-full
+								{task.priority === 'urgent' ? 'bg-rose-500' :
+								 task.priority === 'high'   ? 'bg-amber-500' :
+								 task.priority === 'medium' ? 'bg-white' : 'bg-[#444]'}">
+							</div>
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2">
+									{#if task.type}
+										<span class="text-xs">
+											{({'call':'📞','email':'📧','meeting':'👥','demo':'💻','task':'·','follow_up':'↩'}[task.type] ?? '·')}
+										</span>
+									{/if}
+									<span class="text-[11px] text-white normal-case" style="letter-spacing:0;">{task.title}</span>
+									{#if task.status === 'done'}
+										<span class="text-[8px] text-emerald-500 tracking-widest uppercase">DONE</span>
+									{:else if task.status === 'in_progress'}
+										<span class="text-[8px] text-white tracking-widest uppercase">EN PROGRESO</span>
+									{/if}
+								</div>
+								{#if task.expand?.contact}
+									<div class="mt-0.5 text-[9px] text-[#555] tracking-widest uppercase">
+										{task.expand.contact.name}
+									</div>
+								{/if}
+							</div>
+							<div class="text-[8px] tracking-widest text-[#444] uppercase shrink-0">
+								{task.priority ?? ''}
+							</div>
+						</a>
+					{/each}
+				{/each}
+				<!-- Month summary -->
+				<div class="mt-4 flex flex-wrap items-center gap-4 border-t border-[#1a1a1a] pt-4 text-[9px] tracking-widest text-[#444] uppercase">
+					<span>{agendaTasks().length} tareas en {MONTH_NAMES[viewMonth]}</span>
+					<span>{agendaTasks().filter(t => t.status === 'done').length} completadas</span>
+					<span>{agendaTasks().filter(t => t.status !== 'done' && t.status !== 'cancelled' && t.due_date < new Date().toISOString().slice(0,10)).length} vencidas</span>
+				</div>
+			</div>
+		{/if}
+	{/if}
+
+	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	<!-- MONTH GRID VIEW                                                       -->
+	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	{#if calView === 'month'}
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
 
 		<!-- ═══════════════════════════════════════ CALENDAR GRID ═══════════ -->
@@ -342,4 +450,5 @@
 			</div>
 		</div>
 	</div>
+	{/if}
 </div>
