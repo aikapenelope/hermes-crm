@@ -78,8 +78,8 @@
 	</div>
 
 	<!-- ── Profile card ─────────────────────────────────────────────────── -->
-	<div class="mb-6 rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
-		<div class="border-b border-[#1a1a1a] px-5 py-4">
+	<div class="mb-6 rounded-xl border border-slate-800 bg-slate-900">
+		<div class="border-b border-slate-800 px-5 py-4">
 			<!-- Avatar preview -->
 			<div class="mb-4 flex items-center gap-3">
 				<div class="flex h-12 w-12 items-center justify-center rounded-full
@@ -122,8 +122,8 @@
 	</div>
 
 	<!-- ── Password card ────────────────────────────────────────────────── -->
-	<div class="rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
-		<div class="border-b border-[#1a1a1a] px-5 py-4">
+	<div class="rounded-xl border border-slate-800 bg-slate-900">
+		<div class="border-b border-slate-800 px-5 py-4">
 			<h2 class="text-sm font-semibold text-slate-200">Cambiar contraseña</h2>
 			<p class="mt-0.5 text-xs text-slate-500">Mínimo 8 caracteres</p>
 		</div>

@@ -83,13 +83,13 @@
 				placeholder="Buscar por asunto o remitente…"
 				bind:value={search}
 				oninput={onSearchInput}
-				class="w-full rounded-lg border border-slate-700 bg-[#0d0d0d] py-2 pl-9 pr-3 text-sm
-					text-white placeholder-[#444] outline-none focus:border-white"
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/60 py-2 pl-9 pr-3 text-sm
+					text-slate-100 placeholder-slate-500 outline-none focus:border-blue-500"
 			/>
 		</div>
 		<select
 			bind:value={filterDir}
-			class="rounded-lg border border-slate-700 bg-[#0d0d0d] px-3 py-2 text-sm text-slate-300 outline-none focus:border-white"
+			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500"
 		>
 			<option value="">Todos</option>
 			<option value="inbound">Recibidos</option>
@@ -98,7 +98,7 @@
 	</div>
 
 	<!-- List -->
-	<div class="overflow-hidden rounded-xl border border-[#1a1a1a] bg-[#0a0a0a]">
+	<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
 		{#if loading && !result}
 			<div class="p-5"><Skeleton rows={8} /></div>
 		{:else if result && result.items.length === 0}
@@ -111,7 +111,7 @@
 				{#snippet icon()}<Mail class="h-5 w-5" />{/snippet}
 			</Empty>
 		{:else if result}
-			<ul class="divide-y divide-[#1a1a1a]">
+			<ul class="divide-y divide-slate-800">
 				{#each result.items as email (email.id)}
 					<li class="flex items-center gap-4 px-4 py-3 hover:bg-slate-800/30 transition-colors">
 						<!-- Direction indicator -->
@@ -142,7 +142,7 @@
 
 			<!-- Pagination -->
 			{#if result.totalPages > 1}
-				<div class="flex items-center justify-between border-t border-[#1a1a1a] px-4 py-3">
+				<div class="flex items-center justify-between border-t border-slate-800 px-4 py-3">
 					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
 						<button onclick={() => { page = page - 1; }} disabled={page <= 1}

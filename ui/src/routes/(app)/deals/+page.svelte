@@ -267,7 +267,7 @@
 											<a
 												href="/contacts/{deal.expand.contact.id}"
 												onclick={(e) => e.stopPropagation()}
-												class="mb-2 block truncate uppercase text-[8px] tracking-widest text-blue-600 hover:text-blue-400 transition-colors"
+												class="mb-2 block truncate uppercase text-[8px] tracking-widest text-[#555] hover:text-white transition-colors"
 											>
 												{deal.expand.contact.name || deal.expand.contact.email}
 											</a>

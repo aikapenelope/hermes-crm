@@ -5,6 +5,7 @@
 	import { fade } from 'svelte/transition';
 	import pb from '$lib/pb';
 	import { currentUser } from '$lib/stores';
+	import { GlobalSearch } from '$lib/ui';
 
 	let { children } = $props();
 
@@ -27,10 +28,11 @@
 		{
 			label: 'ANALYTICS // MGMT',
 			items: [
-				{ href: '/tasks',    label: 'TAREAS'    },
-				{ href: '/goals',    label: 'METAS'     },
-				{ href: '/segments', label: 'SEGMENTOS' },
-				{ href: '/products', label: 'PRODUCTOS' },
+				{ href: '/tasks',          label: 'TAREAS'    },
+				{ href: '/goals',          label: 'METAS'     },
+				{ href: '/deals/forecast', label: 'FORECAST'  },
+				{ href: '/segments',       label: 'SEGMENTOS' },
+				{ href: '/products',       label: 'PRODUCTOS' },
 			],
 		},
 		{
@@ -221,20 +223,14 @@
 				</div>
 			</div>
 
-			<!-- Center: search -->
-			<div class="hidden flex-1 px-8 lg:block" style="max-width: 480px;">
-				<input
-					type="text"
-					placeholder="BUSCAR [CONTACTOS / NEGOCIOS / TAREAS]"
-					class="w-full border border-[#222] bg-transparent px-4 py-2 text-[10px]
-						tracking-widest text-[#888] placeholder-[#444] uppercase
-						focus:border-[#444] focus:outline-none"
-				/>
+			<!-- Center: global search -->
+			<div class="hidden flex-1 px-8 lg:flex" style="max-width: 480px;">
+				<GlobalSearch />
 			</div>
 
 			<!-- Right: user info -->
 			<div class="flex items-center gap-3">
-				<div class="h-1.5 w-1.5 bg-white hidden sm:block"></div>
+				<div class="h-1.5 w-1.5 rounded-full bg-blue-500 hidden sm:block"></div>
 				<div class="hidden text-right leading-tight sm:block">
 					<div class="text-white tracking-widest uppercase" style="font-size: 12px; font-family: system-ui, sans-serif; font-weight: 600;">
 						{userName.split('@')[0].slice(0, 16)}
@@ -286,7 +282,7 @@
 			{tzOffset} // {timeStr}
 		</div>
 		<div class="flex gap-0.5">
-			<div class="h-3 w-1 bg-white"></div>
+			<div class="h-3 w-1 bg-blue-500"></div>
 			<div class="h-3 w-1 bg-yellow-500"></div>
 			<div class="h-3 w-1 bg-white"></div>
 		</div>

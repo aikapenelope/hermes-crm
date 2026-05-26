@@ -8,3 +8,4 @@ export { default as Select } from './Select.svelte';
 export { default as Textarea } from './Textarea.svelte';
 export { default as Empty } from './Empty.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
+export { default as GlobalSearch } from './GlobalSearch.svelte';
