@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import pb from '$lib/pb';
 	import { toast } from '$lib/stores';
+	import { sanitizeSearch } from '$lib/utils';
 	import { Sheet, Modal, Btn, Skeleton, Empty } from '$lib/ui';
 	import CompanyForm from '$lib/forms/CompanyForm.svelte';
 	import { Building2, Search, Plus, Pencil, Trash2 } from 'lucide-svelte';
@@ -23,7 +24,9 @@
 	async function fetchCompanies() {
 		loading = true;
 		try {
-			const filter = search.trim() ? `name ~ '${search}'` : undefined;
+			// sanitizeSearch escapes \ and ' to prevent PocketBase filter injection.
+			// See: https://pocketbase.io/docs/api-rules-and-filters/
+			const filter = search.trim() ? `name ~ '${sanitizeSearch(search)}'` : undefined;
 			result = await pb.collection('companies').getList<Company>(page, perPage, {
 				filter, sort: 'name', fields: 'id,name,industry,website,city,country,size',
 			});
