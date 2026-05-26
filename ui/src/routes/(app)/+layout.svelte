@@ -32,6 +32,13 @@
 			],
 		},
 		{
+			label: 'HERMES // LOG',
+			items: [
+				{ href: '/emails',  label: 'EMAILS'   },
+				{ href: '/reports', label: 'REPORTES' },
+			],
+		},
+		{
 			label: 'CUENTA',
 			items: [
 				{ href: '/settings', label: 'AJUSTES' },
