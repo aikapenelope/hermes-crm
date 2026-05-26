@@ -404,41 +404,12 @@ migrate((app) => {
     });
     app.save(seg_own);
 
-    // =========================================================================
-    // 13. CONVERSATIONS (immutable message log per contact/channel)
-    // =========================================================================
-    // Written by Hermes post-hook (0 tokens) after every inbound/outbound msg.
-    // Never updated or deleted — append-only audit trail.
-    const conversations = new Collection({
-        name: "conversations", type: "base",
-        listRule: AUTH, viewRule: AUTH,
-        createRule: AUTH,
-        updateRule: null,
-        deleteRule: null,
-    });
-    conversations.fields.push(new RelationField({
-        name: "contact", collectionId: contactsId, cascadeDelete: false, maxSelect: 1,
-    }));
-    conversations.fields.push(new SelectField({
-        name: "channel", maxSelect: 1,
-        values: ["whatsapp", "telegram", "email", "web"],
-    }));
-    conversations.fields.push(new SelectField({
-        name: "direction", maxSelect: 1,
-        values: ["inbound", "outbound"],
-    }));
-    conversations.fields.push(new TextField({ name: "content", required: true }));
-    conversations.fields.push(new TextField({ name: "session_id" }));
-    conversations.fields.push(new TextField({ name: "hermes_agent_id" }));
-    app.save(conversations);
-
 }, (app) => {
     for (const name of [
         "seg_won_by_owner","seg_revenue_by_source","seg_cold_contacts",
         "seg_pipeline_at_risk","seg_hot_leads",
         "goals","deal_items","products","notes","activities",
         "tasks","deals","contacts","pipelines","companies","tags",
-        "conversations",
     ]) {
         try { app.delete(app.findCollectionByNameOrId(name)); } catch(_) {}
     }

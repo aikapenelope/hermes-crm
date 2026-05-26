@@ -3,45 +3,48 @@
 	import pb from '$lib/pb';
 	import { currentUser } from '$lib/stores';
 
-	// ── Types ────────────────────────────────────────────────────────────────
+	// ── Types ─────────────────────────────────────────────────────────────────
 	type UpcomingTask = {
 		id: string; title: string; type: string;
 		priority: string; status: string; due_date: string;
 		expand?: { contact?: { name: string; email: string } };
 	};
-	type RecentConv = {
-		id: string; channel: string; direction: string;
-		content: string; created: string;
-		expand?: { contact?: { name: string; email: string } };
+	/**
+	 * Recent notes across all contacts — used in Section 3 instead of
+	 * raw conversation logs.  Notes are structured context added by the
+	 * human team, directly actionable from the CRM.
+	 */
+	type RecentNote = {
+		id: string; content: string; created: string;
+		expand?: { contact?: { id: string; name: string } };
 	};
 	type PriorityTask = {
 		id: string; title: string; type: string; priority: string; status: string;
 	};
 
-	// ── State ────────────────────────────────────────────────────────────────
+	// ── State ─────────────────────────────────────────────────────────────────
 	let loading = $state(true);
 
 	// Stats
-	let contactsTotal    = $state(0);
-	let statusBarsRaw    = $state([0, 0, 0, 0, 0]); // lead/prospect/customer/churned/inactive
-	let openDealsCount   = $state(0);
-	let openDealsValue   = $state(0);
-	let wonDealsCount    = $state(0);
-	let wonDealsValue    = $state(0);
-	let totalDealsCount  = $state(0);
-	let dealLeadCount    = $state(0);
+	let contactsTotal     = $state(0);
+	let statusBarsRaw     = $state([0, 0, 0, 0, 0]); // lead/prospect/customer/churned/inactive
+	let openDealsCount    = $state(0);
+	let openDealsValue    = $state(0);
+	let wonDealsCount     = $state(0);
+	let wonDealsValue     = $state(0);
+	let totalDealsCount   = $state(0);
+	let dealLeadCount     = $state(0);
 	let dealProposalCount = $state(0);
-	let dealNegCount     = $state(0);
+	let dealNegCount      = $state(0);
 	let overdueTasksCount = $state(0);
-	let tasksBarsRaw     = $state([0, 0, 0, 0]); // urgent/high/medium/low
-	let todayConvsCount  = $state(0);
+	let tasksBarsRaw      = $state([0, 0, 0, 0]); // urgent/high/medium/low
 
 	// Sections
-	let upcomingTasks  = $state<UpcomingTask[]>([]);
-	let recentConvs    = $state<RecentConv[]>([]);
-	let priorityTasks  = $state<PriorityTask[]>([]);
+	let upcomingTasks = $state<UpcomingTask[]>([]);
+	let recentNotes   = $state<RecentNote[]>([]);
+	let priorityTasks = $state<PriorityTask[]>([]);
 
-	// ── Greeting ─────────────────────────────────────────────────────────────
+	// ── Greeting ──────────────────────────────────────────────────────────────
 	const greeting = (() => {
 		const h = new Date().getHours();
 		return h < 12 ? 'BUENOS DÍAS' : h < 18 ? 'BUENAS TARDES' : 'BUENAS NOCHES';
@@ -52,28 +55,24 @@
 			.split('@')[0].split(' ')[0].toUpperCase()
 	);
 
-	// ── Load ─────────────────────────────────────────────────────────────────
+	// ── Load ──────────────────────────────────────────────────────────────────
 	onMount(async () => {
-		const today = new Date().toISOString().slice(0, 10);
 		try {
-			const [allContacts, allDeals, allTasks, convsToday, upcoming, recent, priority] =
+			const [allContacts, allDeals, allTasks, upcoming, notes, priority] =
 				await Promise.all([
 					pb.collection('contacts').getFullList({ fields: 'status' }),
 					pb.collection('deals').getFullList({ fields: 'stage,value' }),
 					pb.collection('tasks').getFullList({ fields: 'priority,status,due_date' }),
-					pb.collection('conversations').getList(1, 1, {
-						filter: `created >= '${today} 00:00:00'`,
-					}),
 					pb.collection('tasks').getList<UpcomingTask>(1, 4, {
 						filter: "(status = 'todo' || status = 'in_progress')",
 						sort: 'due_date,-created',
 						expand: 'contact',
 						fields: 'id,title,type,priority,status,due_date,expand',
 					}),
-					pb.collection('conversations').getList<RecentConv>(1, 3, {
+					pb.collection('notes').getList<RecentNote>(1, 3, {
 						sort: '-created',
 						expand: 'contact',
-						fields: 'id,channel,direction,content,created,expand',
+						fields: 'id,content,created,expand',
 					}),
 					pb.collection('tasks').getList<PriorityTask>(1, 3, {
 						filter: "(priority = 'urgent' || priority = 'high') && (status = 'todo' || status = 'in_progress')",
@@ -82,7 +81,7 @@
 					}),
 				]);
 
-			// Contacts
+			// Contacts by status
 			contactsTotal = allContacts.length;
 			const sc = { lead: 0, prospect: 0, customer: 0, churned: 0, inactive: 0 };
 			for (const c of allContacts as unknown as { status?: string }[]) {
@@ -92,16 +91,16 @@
 			statusBarsRaw = [sc.lead, sc.prospect, sc.customer, sc.churned, sc.inactive];
 
 			// Deals
-			const openD   = (allDeals as unknown as { stage: string; value?: number }[]).filter(d => !['won','lost'].includes(d.stage));
-			const wonD    = (allDeals as unknown as { stage: string; value?: number }[]).filter(d => d.stage === 'won');
-			openDealsCount   = openD.length;
-			openDealsValue   = openD.reduce((s, d) => s + (d.value ?? 0), 0);
-			wonDealsCount    = wonD.length;
-			wonDealsValue    = wonD.reduce((s, d) => s + (d.value ?? 0), 0);
-			totalDealsCount  = allDeals.length;
-			dealLeadCount    = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'lead').length;
+			const openD  = (allDeals as unknown as { stage: string; value?: number }[]).filter(d => !['won','lost'].includes(d.stage));
+			const wonD   = (allDeals as unknown as { stage: string; value?: number }[]).filter(d => d.stage === 'won');
+			openDealsCount    = openD.length;
+			openDealsValue    = openD.reduce((s, d) => s + (d.value ?? 0), 0);
+			wonDealsCount     = wonD.length;
+			wonDealsValue     = wonD.reduce((s, d) => s + (d.value ?? 0), 0);
+			totalDealsCount   = allDeals.length;
+			dealLeadCount     = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'lead').length;
 			dealProposalCount = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'proposal').length;
-			dealNegCount     = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'negotiation').length;
+			dealNegCount      = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'negotiation').length;
 
 			// Tasks
 			const at = allTasks as unknown as { priority: string; status: string; due_date?: string }[];
@@ -114,11 +113,9 @@
 				at.filter(t => t.priority === 'low'    && t.status !== 'done').length,
 			];
 
-			// Live data
-			todayConvsCount = convsToday.totalItems;
-			upcomingTasks   = upcoming.items;
-			recentConvs     = recent.items;
-			priorityTasks   = priority.items;
+			upcomingTasks = upcoming.items;
+			recentNotes   = notes.items;
+			priorityTasks = priority.items;
 		} catch (e) {
 			console.error(e);
 		} finally {
@@ -126,15 +123,15 @@
 		}
 	});
 
-	// ── Derived chart values ──────────────────────────────────────────────────
-	const wonPct = $derived(Math.round((wonDealsCount / Math.max(totalDealsCount, 1)) * 100));
+	// ── Derived chart values ───────────────────────────────────────────────────
+	const wonPct    = $derived(Math.round((wonDealsCount / Math.max(totalDealsCount, 1)) * 100));
 	const donutFill = $derived(wonPct * 100.53 / 100);
 
-	// ── Helpers ───────────────────────────────────────────────────────────────
+	// ── Helpers ────────────────────────────────────────────────────────────────
 	function fmtDate(d: string): string {
 		if (!d) return 'SIN_FECHA';
 		const dt = new Date(d);
-		const p = (n: number) => String(n).padStart(2, '0');
+		const p  = (n: number) => String(n).padStart(2, '0');
 		return `${p(dt.getDate())}.${p(dt.getMonth() + 1)}.${dt.getFullYear()}`;
 	}
 	function timeAgo(d: string): string {
@@ -145,7 +142,7 @@
 		if (h < 24)  return `${h} HRS AGO`;
 		return `${Math.floor(h / 24)} DAYS AGO`;
 	}
-	function truncate(s: string, n = 85): string {
+	function truncate(s: string, n = 120): string {
 		return s.length > n ? s.slice(0, n) + '…' : s;
 	}
 	function typeLabel(t: string): string {
@@ -155,9 +152,6 @@
 		};
 		return m[t] ?? t.toUpperCase();
 	}
-	function channelLabel(c: string): string {
-		return c.toUpperCase();
-	}
 	function barStyle(val: number, max: number, isRainbow: boolean): string {
 		const h = Math.max(Math.round((val / Math.max(max, 1)) * 100), 4);
 		const bg = isRainbow
@@ -166,10 +160,10 @@
 		return `height:${h}%; background:${bg};`;
 	}
 
-	// Activity log left-border colors
-	const convBorderColors = [
+	// Left-border accent colors for note entries (most recent → oldest → neutral)
+	const noteBorderColors = [
 		'background: white;',
-		'background: linear-gradient(to bottom, #fb923c, #eab308);',
+		'background: linear-gradient(to bottom, #3b82f6, #8b5cf6);',
 		'background: #333;',
 	];
 </script>
@@ -178,9 +172,9 @@
 
 <div class="p-8 lg:p-12 pb-16 uppercase tracking-widest" style="font-size:11px;">
 
-	<!-- ══════════════════════════════════════════════════════════════════════ -->
-	<!-- HEADER                                                                 -->
-	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	<!-- ════════════════════════════════════════════════════════════════════════ -->
+	<!-- HEADER                                                                   -->
+	<!-- ════════════════════════════════════════════════════════════════════════ -->
 	<div class="mb-10 flex items-end justify-between">
 		<div>
 			<h1 class="mb-2 normal-case tracking-tight text-[#aaa]"
@@ -200,9 +194,9 @@
 		</a>
 	</div>
 
-	<!-- ══════════════════════════════════════════════════════════════════════ -->
-	<!-- SECTION 1 — STAT CARDS                                                -->
-	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	<!-- ════════════════════════════════════════════════════════════════════════ -->
+	<!-- SECTION 1 — STAT CARDS                                                  -->
+	<!-- ════════════════════════════════════════════════════════════════════════ -->
 	<div class="relative mb-10">
 		<div class="absolute -left-3 -top-3 z-10 flex h-4 w-4 items-center justify-center
 			bg-white text-[10px] font-bold text-black">1</div>
@@ -218,22 +212,21 @@
 				{:else}
 					{@const maxBar = Math.max(...statusBarsRaw, 1)}
 					<div class="mt-4 flex h-10 items-end gap-1">
-						{#each statusBarsRaw as val, i}
+						{#each statusBarsRaw as val}
 							<div class="w-1/5" style={barStyle(val, maxBar, val === maxBar && val > 0)}></div>
 						{/each}
 					</div>
 				{/if}
 
 				<div class="mt-4 flex items-baseline gap-2">
-					<span class="font-sans text-2xl font-medium text-white"
-						style="letter-spacing: -0.02em;">
+					<span class="font-sans text-2xl font-medium text-white" style="letter-spacing:-0.02em;">
 						{loading ? '—' : contactsTotal}
 					</span>
 					<span class="text-[10px] tracking-widest text-[#555]">CONTACTOS</span>
 				</div>
 			</div>
 
-			<!-- Card 2: NEGOCIOS // PIPELINE -->
+			<!-- Card 2: DEALS // PIPELINE -->
 			<div class="flex h-36 flex-col justify-between border border-[#1a1a1a] bg-[#090909] p-5">
 				<div class="text-[10px] tracking-widest text-[#555]">DEALS // PIPELINE</div>
 
@@ -254,8 +247,7 @@
 				</div>
 
 				<div class="mt-4 flex items-baseline gap-2">
-					<span class="font-sans text-2xl font-medium text-white"
-						style="letter-spacing: -0.02em;">
+					<span class="font-sans text-2xl font-medium text-white" style="letter-spacing:-0.02em;">
 						{loading ? '—' : openDealsCount}
 					</span>
 					<span class="text-[10px] tracking-widest text-[#555]">ABIERTOS</span>
@@ -294,15 +286,14 @@
 				{/if}
 
 				<div class="mt-14 flex items-baseline gap-2">
-					<span class="font-sans text-2xl font-medium text-white"
-						style="letter-spacing: -0.02em;">
+					<span class="font-sans text-2xl font-medium text-white" style="letter-spacing:-0.02em;">
 						{loading ? '—' : String(wonDealsCount).padStart(2, '0')}
 					</span>
 					<span class="text-[10px] tracking-widest text-[#555]">GANADOS</span>
 				</div>
 			</div>
 
-			<!-- Card 4: TAREAS // SEMANA -->
+			<!-- Card 4: TAREAS // PENDIENTES -->
 			<div class="flex h-36 flex-col justify-between border border-[#1a1a1a] bg-[#090909] p-5">
 				<div class="text-[10px] tracking-widest text-[#555]">TAREAS // PENDIENTES</div>
 
@@ -311,7 +302,7 @@
 				{:else}
 					{@const maxTask = Math.max(...tasksBarsRaw, 1)}
 					<div class="mt-4 flex h-10 items-end justify-between gap-1">
-						{#each tasksBarsRaw as val, i}
+						{#each tasksBarsRaw as val}
 							{@const h = Math.max(Math.round((val / maxTask) * 100), 4)}
 							<div class="flex-1" style="height:{h}%; background:{h === 100 ? 'white' : h > 50 ? '#333' : '#222'};"></div>
 						{/each}
@@ -319,8 +310,7 @@
 				{/if}
 
 				<div class="mt-4 flex items-baseline gap-2">
-					<span class="font-sans text-2xl font-medium text-white"
-						style="letter-spacing: -0.02em;">
+					<span class="font-sans text-2xl font-medium text-white" style="letter-spacing:-0.02em;">
 						{loading ? '—' : overdueTasksCount}
 					</span>
 					<span class="text-[10px] tracking-widest text-[#555]">VENCIDAS</span>
@@ -330,15 +320,15 @@
 		</div>
 	</div>
 
-	<!-- ══════════════════════════════════════════════════════════════════════ -->
-	<!-- MAIN GRID 8 + 4                                                        -->
-	<!-- ══════════════════════════════════════════════════════════════════════ -->
+	<!-- ════════════════════════════════════════════════════════════════════════ -->
+	<!-- MAIN GRID 8 + 4                                                          -->
+	<!-- ════════════════════════════════════════════════════════════════════════ -->
 	<div class="grid grid-cols-1 gap-10 lg:grid-cols-12">
 
-		<!-- ════════════════════════════════════════════ LEFT COL (span 8) ═══ -->
+		<!-- ════════════════════════════════════ LEFT COL (span 8) ══════════ -->
 		<div class="flex flex-col gap-10 lg:col-span-8">
 
-			<!-- ── Section 2: Upcoming tasks ─────────────────────────────────── -->
+			<!-- ── Section 2: Upcoming tasks ────────────────────────────────── -->
 			<div class="relative border border-[#1a1a1a] bg-[#090909] p-6 pt-8">
 				<div class="absolute -left-3 -top-3 z-10 flex h-4 w-4 items-center justify-center
 					bg-white text-[10px] font-bold text-black">2</div>
@@ -369,7 +359,7 @@
 									</div>
 									<div class="min-w-0">
 										<div class="mb-0.5 truncate font-sans text-[13px] font-semibold capitalize text-white"
-											style="letter-spacing: -0.01em;">
+											style="letter-spacing:-0.01em;">
 											{task.expand?.contact?.name ?? task.title}
 										</div>
 										<div class="text-[9px] tracking-widest text-[#555]">
@@ -388,17 +378,17 @@
 				{/if}
 			</div>
 
-			<!-- ── Section 3: Activity log ────────────────────────────────────── -->
+			<!-- ── Section 3: Recent notes ───────────────────────────────────── -->
 			<div class="relative min-h-64 border border-[#1a1a1a] bg-[#090909] p-6 pt-8">
 				<div class="absolute -left-3 -top-3 z-10 flex h-4 w-4 items-center justify-center
 					bg-white text-[10px] font-bold text-black">3</div>
 
 				<div class="mb-8 flex items-center justify-between">
-					<div class="tracking-widest text-[#888]">ACTIVIDAD_RECIENTE // LOG</div>
-					<div class="flex gap-2">
-						<div class="h-3 w-3 bg-white"></div>
-						<div class="h-3 w-3 border border-[#444]"></div>
-					</div>
+					<div class="tracking-widest text-[#888]">NOTAS_RECIENTES // CRM</div>
+					<a href="/contacts"
+						class="border-b border-[#333] pb-0.5 text-[9px] tracking-widest text-[#444] hover:text-white transition-colors">
+						VER_CONTACTOS →
+					</a>
 				</div>
 
 				{#if loading}
@@ -410,32 +400,38 @@
 							</div>
 						{/each}
 					</div>
-				{:else if recentConvs.length === 0}
-					<div class="py-8 text-center text-[#444]">SIN_ACTIVIDAD_RECIENTE</div>
+				{:else if recentNotes.length === 0}
+					<div class="py-8 text-center text-[#444]">SIN_NOTAS — AGREGA CONTEXTO A TUS CONTACTOS</div>
 				{:else}
 					<div class="ml-2 flex flex-col gap-8">
-						{#each recentConvs as conv, i (conv.id)}
+						{#each recentNotes as note, i (note.id)}
 							<div class="relative pl-6">
-								<!-- Left border line -->
+								<!-- Left accent bar -->
 								<div class="absolute left-0 top-0 h-full w-1"
-									style={convBorderColors[i] ?? 'background:#222;'}></div>
+									style={noteBorderColors[i] ?? 'background:#222;'}></div>
 
 								<div class="mb-2 text-[9px] tracking-widest text-[#555]">
-									CONVERSACIONES // {channelLabel(conv.channel)} // {timeAgo(conv.created)}
+									NOTAS // CRM_ENTRY // {timeAgo(note.created)}
 								</div>
 								<div class="mb-3 font-sans text-[13px] normal-case tracking-wide text-[#ccc]"
-									style="letter-spacing: 0.01em;">
-									{#if conv.expand?.contact}
-										<span class="font-bold text-white">{conv.expand.contact.name}</span>:&nbsp;
+									style="letter-spacing:0.01em;">
+									{#if note.expand?.contact}
+										<a href="/contacts/{note.expand.contact.id}"
+											class="font-bold text-white hover:text-[#aaa] transition-colors">
+											{note.expand.contact.name}
+										</a>:&nbsp;
 									{/if}
-									"{truncate(conv.content)}"
+									"{truncate(note.content)}"
 								</div>
 								<div class="flex gap-2">
+									{#if note.expand?.contact}
+										<a href="/contacts/{note.expand.contact.id}"
+											class="border border-[#222] px-2 py-1 text-[9px] tracking-widest text-[#666] hover:text-white transition-colors">
+											VER_CONTACTO
+										</a>
+									{/if}
 									<span class="border border-[#222] px-2 py-1 text-[9px] tracking-widest text-[#666]">
-										{conv.direction === 'inbound' ? 'ENTRANTE' : 'SALIENTE'}
-									</span>
-									<span class="border border-[#222] px-2 py-1 text-[9px] tracking-widest text-[#666]">
-										{channelLabel(conv.channel)}
+										CRM
 									</span>
 								</div>
 							</div>
@@ -446,10 +442,10 @@
 
 		</div>
 
-		<!-- ════════════════════════════════════════════ RIGHT COL (span 4) ══ -->
+		<!-- ════════════════════════════════════ RIGHT COL (span 4) ══════════ -->
 		<div class="flex flex-col gap-10 lg:col-span-4">
 
-			<!-- ── Section 4: Priority tasks ─────────────────────────────────── -->
+			<!-- ── Section 4: Priority tasks ────────────────────────────────── -->
 			<div class="relative border border-[#1a1a1a] bg-[#090909] p-6 pt-8">
 				<div class="absolute -left-3 -top-3 z-10 flex h-4 w-4 items-center justify-center
 					bg-white text-[10px] font-bold text-black">4</div>
@@ -474,7 +470,7 @@
 								<div class="mt-0.5 h-3 w-3 flex-shrink-0 bg-white"></div>
 								<div>
 									<div class="mb-1 font-sans text-[13px] normal-case text-white"
-										style="letter-spacing: -0.01em;">
+										style="letter-spacing:-0.01em;">
 										{task.title}
 									</div>
 									<div class="text-[9px] tracking-widest text-[#555]">
@@ -501,7 +497,6 @@
 
 				<div class="flex flex-col gap-6">
 
-					<!-- Pipeline value input-style -->
 					<div>
 						<div class="mb-2 text-[9px] tracking-widest text-[#444]">PIPELINE_TOTAL [USD]</div>
 						<div class="flex items-center gap-3 border border-[#222] p-3">
@@ -512,7 +507,6 @@
 						</div>
 					</div>
 
-					<!-- Estado + deals count -->
 					<div class="flex gap-4">
 						<div class="flex-1">
 							<div class="mb-2 text-[9px] tracking-widest text-[#444]">ESTADO</div>
@@ -530,10 +524,8 @@
 						</div>
 					</div>
 
-					<!-- Won revenue result -->
 					<div class="mt-2">
 						<div class="relative mb-4 border-b border-[#333] pb-2">
-							<!-- Rainbow line overlay on border-bottom -->
 							<div class="absolute bottom-0 left-0 right-0 h-[1px] opacity-50"
 								style="background: linear-gradient(to right, #ff3333, #ffaa00, #00ffaa, #00aaff, #aa00ff);"></div>
 							<div class="flex items-end justify-between">
@@ -548,7 +540,6 @@
 							</div>
 						</div>
 
-						<!-- Stage breakdown -->
 						<div class="flex justify-between">
 							<div>
 								<div class="mb-1 text-[8px] tracking-widest text-[#444]">LEADS</div>
