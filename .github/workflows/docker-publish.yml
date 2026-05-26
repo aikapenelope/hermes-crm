@@ -1,0 +1,145 @@
+# =============================================================================
+# hermes-crm — Docker image CI/CD
+#
+# Builds a multi-arch Docker image and publishes it to the GitHub Container
+# Registry (ghcr.io) on every push to main.
+#
+# Image: ghcr.io/aikapenelope/hermes-crm:latest
+#        ghcr.io/aikapenelope/hermes-crm:<sha>
+#        ghcr.io/aikapenelope/hermes-crm:<YYYY.MM.DD>
+#
+# Pull:
+#   docker pull ghcr.io/aikapenelope/hermes-crm:latest
+#
+# No secrets required beyond the default GITHUB_TOKEN which is automatically
+# provided to all Actions workflows.
+#
+# Architectures built:
+#   linux/amd64   — standard x86 VPS (Hetzner, DigitalOcean, Linode, etc.)
+#   linux/arm64   — ARM VPS / Apple Silicon / Raspberry Pi
+#
+# Build flow:
+#   1. Install npm deps and build the SvelteKit SPA (Node 20, cached)
+#   2. docker buildx bake → multi-arch image
+#   3. Push to ghcr.io with three tags: latest, SHA, date
+# =============================================================================
+
+name: Build and publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      # Only rebuild when application code changes.
+      # Changes to docs, README, skills don't require a new image.
+      - "Dockerfile"
+      - "entrypoint.sh"
+      - "pb_migrations/**"
+      - "ui/**"
+      - ".github/workflows/docker-publish.yml"
+
+  # Allow manual trigger from the Actions tab for emergency rebuilds
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/hermes-crm
+
+jobs:
+  build-and-push:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+
+    # Grant write access to packages (ghcr.io) and read access to contents
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Node / SvelteKit build cache ─────────────────────────────────────
+      # Cache node_modules to avoid re-downloading packages on every build.
+      # The Dockerfile Stage 1 copies package.json/package-lock.json first
+      # for Docker layer caching, but the GitHub cache is faster for CI.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      # ── Docker build infrastructure ──────────────────────────────────────
+      # QEMU: needed for cross-platform builds (arm64 on amd64 runner)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # buildx: Docker's extended build engine with multi-arch support
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ── Authenticate to ghcr.io ──────────────────────────────────────────
+      # Uses the built-in GITHUB_TOKEN — no extra secrets needed.
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Generate image metadata and tags ─────────────────────────────────
+      # Produces three tags automatically:
+      #   latest       — always points to the most recent main build
+      #   <sha>        — exact commit for reproducible deploys
+      #   YYYY.MM.DD   — human-readable date tag for audit purposes
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,format=short
+            type=schedule,pattern={{date 'YYYY.MM.DD'}}
+          labels: |
+            org.opencontainers.image.title=Hermes CRM
+            org.opencontainers.image.description=PocketBase CRM for Hermes AI Agent tenants — single container, auto-configured, plug-and-play
+            org.opencontainers.image.vendor=AikaLabs
+            org.opencontainers.image.licenses=Apache-2.0
+
+      # ── Build and push ────────────────────────────────────────────────────
+      # Uses Docker layer caching from the GitHub Actions cache backend.
+      # On first build: all layers are built fresh (~3-5 min).
+      # On subsequent builds (only ui/ changed): Node deps layer is cached,
+      # only the npm run build + COPY layers are re-executed (~1-2 min).
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache: reuse layers across builds for the same branch
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      # ── Summary ──────────────────────────────────────────────────────────
+      - name: Write job summary
+        run: |
+          echo "## Docker image published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`ghcr.io/${{ env.IMAGE_NAME }}:latest\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pull:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

@@ -1,7 +1,13 @@
 .git
 .gitignore
 *.md
+.env
+.env.*
+!.env.example
 ui/node_modules
 ui/.svelte-kit
 ui/build
 pb_migrations/__snapshots__
+hermes-config/
+docker-compose.yml
+.github/
