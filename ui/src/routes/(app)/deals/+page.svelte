@@ -15,7 +15,7 @@
 
 	const stages = [
 		{ id: 'lead',        label: 'LEAD',        dot: 'bg-[#555]'   },
-		{ id: 'qualified',   label: 'CALIFICADO',  dot: 'bg-white'    },
+		{ id: 'qualified',   label: 'CALIFICADO',  dot: 'bg-blue-500' },
 		{ id: 'proposal',    label: 'PROPUESTA',   dot: 'bg-amber-500'},
 		{ id: 'negotiation', label: 'NEGOCIACIÓN', dot: 'bg-orange-500'},
 		{ id: 'won',         label: 'GANADO',      dot: 'bg-emerald-500'},
@@ -267,7 +267,7 @@
 											<a
 												href="/contacts/{deal.expand.contact.id}"
 												onclick={(e) => e.stopPropagation()}
-												class="mb-2 block truncate uppercase text-[8px] tracking-widest text-[#555] hover:text-white transition-colors"
+												class="mb-2 block truncate uppercase text-[8px] tracking-widest text-blue-600 hover:text-blue-400 transition-colors"
 											>
 												{deal.expand.contact.name || deal.expand.contact.email}
 											</a>

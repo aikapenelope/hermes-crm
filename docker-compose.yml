@@ -46,6 +46,12 @@ services:
       # Persistent data: SQLite database, uploaded files, request logs.
       # IMPORTANT: back up this directory regularly.
       - crm-data:/pb/pb_data
+      # UI build: mount as bind so docker cp changes and custom builds persist
+      # across container recreations. Populate with: npm run build in ui/
+      # On first run, this directory may be empty — PocketBase serves nothing
+      # at / until the build is placed here.
+      # Leave commented out to use the UI bundled in the Docker image instead.
+      # - ./pb_public:/pb/pb_public
 
     environment:
       # ── Actor 1: Hermes MCP superuser ──────────────────────────────────

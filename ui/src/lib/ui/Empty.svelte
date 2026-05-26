@@ -1,23 +1,25 @@
 <script lang="ts">
 	interface Props {
-		title: string; description?: string;
 		icon?: import('svelte').Snippet;
+		title: string;
+		description?: string;
 		action?: import('svelte').Snippet;
 	}
-	let { title, description, icon, action }: Props = $props();
+
+	let { icon, title, description, action }: Props = $props();
 </script>
 
-<div class="flex flex-col items-center justify-center py-16 text-center uppercase tracking-widest">
+<div class="flex flex-col items-center justify-center py-16 text-center">
 	{#if icon}
-		<div class="mb-4 flex h-12 w-12 items-center justify-center border border-[#222] text-[#444]">
+		<div class="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-slate-400">
 			{@render icon()}
 		</div>
 	{/if}
-	<p class="text-[11px] font-medium text-white">{title}</p>
+	<p class="text-sm font-medium text-slate-300">{title}</p>
 	{#if description}
-		<p class="mt-1 text-[9px] text-[#444]">{description}</p>
+		<p class="mt-1 text-sm text-slate-500">{description}</p>
 	{/if}
 	{#if action}
-		<div class="mt-6">{@render action()}</div>
+		<div class="mt-4">{@render action()}</div>
 	{/if}
 </div>

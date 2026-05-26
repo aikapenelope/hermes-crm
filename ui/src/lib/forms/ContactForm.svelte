@@ -13,42 +13,36 @@
 	let { contact = null, onSave, onClose }: Props = $props();
 
 	// Form state — initialised via $effect so they react when `contact` prop changes
-	let name        = $state('');
-	let email       = $state('');
-	let phone       = $state('');
-	let status      = $state('');
-	let source      = $state('');
-	let company     = $state('');
-	let linkedin    = $state('');
-	let notes       = $state('');
-	let selectedTags = $state<string[]>([]);
+	let name     = $state('');
+	let email    = $state('');
+	let phone    = $state('');
+	let status   = $state('');
+	let source   = $state('');
+	let company  = $state('');
+	let linkedin = $state('');
+	let notes    = $state('');
 
 	$effect(() => {
-		name        = String(contact?.name     ?? '');
-		email       = String(contact?.email    ?? '');
-		phone       = String(contact?.phone    ?? '');
-		status      = String(contact?.status   ?? '');
-		source      = String(contact?.source   ?? '');
-		company     = String(contact?.company  ?? '');
-		linkedin    = String(contact?.linkedin ?? '');
-		notes       = String(contact?.notes    ?? '');
-		selectedTags = Array.isArray(contact?.tags)
-			? (contact!.tags as unknown as string[])
-			: [];
+		name     = String(contact?.name     ?? '');
+		email    = String(contact?.email    ?? '');
+		phone    = String(contact?.phone    ?? '');
+		status   = String(contact?.status   ?? '');
+		source   = String(contact?.source   ?? '');
+		company  = String(contact?.company  ?? '');
+		linkedin = String(contact?.linkedin ?? '');
+		notes    = String(contact?.notes    ?? '');
 	});
 
-	let errors    = $state<Record<string, string>>({});
-	let saving    = $state(false);
+	let errors     = $state<Record<string, string>>({});
+	let saving     = $state(false);
 
-	// Companies + tags for selects
-	let companies = $state<{ id: string; name: string }[]>([]);
-	let allTags   = $state<{ id: string; label: string }[]>([]);
+	// Companies for select
+	let companies  = $state<{ id: string; name: string }[]>([]);
 	onMount(async () => {
 		try {
-			[companies, allTags] = await Promise.all([
-				pb.collection('companies').getFullList<{ id: string; name: string }>({ fields: 'id,name', sort: 'name' }),
-				pb.collection('tags').getFullList<{ id: string; label: string }>({ fields: 'id,label', sort: 'label' }),
-			]);
+			companies = await pb.collection('companies').getFullList<{ id: string; name: string }>({
+				fields: 'id,name', sort: 'name',
+			});
 		} catch { /* non-critical */ }
 	});
 
@@ -73,7 +67,6 @@
 				company: company || null,
 				linkedin: linkedin.trim() || null,
 				notes: notes.trim() || null,
-				tags: selectedTags,
 			};
 			const record = contact?.id
 				? await pb.collection('contacts').update(String(contact.id), data)
@@ -143,31 +136,6 @@
 	<FormField label="Notas">
 		<Textarea bind:value={notes} placeholder="Notas sobre este contacto…" rows={3} />
 	</FormField>
-
-	<!-- Tags multi-select -->
-	{#if allTags.length > 0}
-		<div>
-			<div class="mb-2 text-[9px] tracking-widest text-[#444] uppercase">Tags</div>
-			<div class="flex flex-wrap gap-1.5">
-				{#each allTags as tag}
-					<button
-						type="button"
-						onclick={() => {
-							selectedTags = selectedTags.includes(tag.id)
-								? selectedTags.filter(id => id !== tag.id)
-								: [...selectedTags, tag.id];
-						}}
-						class="border px-2 py-1 text-[9px] tracking-widest uppercase transition-colors
-							{selectedTags.includes(tag.id)
-								? 'border-white text-white'
-								: 'border-[#222] text-[#555] hover:border-[#444] hover:text-[#888]'}"
-					>
-						{tag.label}
-					</button>
-				{/each}
-			</div>
-		</div>
-	{/if}
 
 	<!-- Actions -->
 	<div class="flex justify-end gap-2 pt-2">

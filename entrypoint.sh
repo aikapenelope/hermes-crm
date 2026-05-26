@@ -68,6 +68,15 @@ PB="/pb/pocketbase"
 DATA_DIR="/pb/pb_data"
 
 # ---------------------------------------------------------------------------
+# Ensure pb_data exists and logs.db is owned correctly
+# The logs.db file must be owned by the pocketbase user (uid 1001).
+# If it was created by a previous run as root, PocketBase can't write to it
+# and request logging is silently broken.
+# ---------------------------------------------------------------------------
+mkdir -p "${DATA_DIR}"
+touch "${DATA_DIR}/logs.db" 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
 # Actor 1 — Hermes MCP superuser
 # Uses `pocketbase superuser upsert` (available since v0.22, idempotent).
 # Creates or updates the _superusers record.

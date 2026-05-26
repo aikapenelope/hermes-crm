@@ -47,20 +47,20 @@
 		hermes:        'Hermes',
 	};
 	const typeBadge: Record<string, 'slate' | 'blue' | 'violet' | 'amber'> = {
-		cron:          'slate',
+		cron:          'blue',
 		manual:        'slate',
 		email_summary: 'violet',
 		hermes:        'amber',
 	};
-	const statusBadge: Record<string, 'green' | 'slate' | 'amber' | 'red'> = {
+	const statusBadge: Record<string, 'green' | 'blue' | 'amber' | 'red'> = {
 		success: 'green',
-		info:    'slate',
+		info:    'blue',
 		warning: 'amber',
 		error:   'red',
 	};
 	const statusDot: Record<string, string> = {
 		success: 'bg-emerald-500',
-		info:    'bg-white',
+		info:    'bg-blue-500',
 		warning: 'bg-amber-500',
 		error:   'bg-red-500',
 	};
@@ -76,7 +76,7 @@
 	<div class="mb-5 flex items-center justify-between">
 		<div>
 			<h1>Reportes</h1>
-			<p class="mt-0.5 text-sm text-[#888]">
+			<p class="mt-0.5 text-sm text-slate-400">
 				{result ? `${result.totalItems} reportes` : '…'}
 				— generados por Hermes automáticamente
 			</p>
@@ -87,7 +87,7 @@
 	<div class="mb-4">
 		<select
 			bind:value={filterType}
-			class="rounded-lg border border-[#222] bg-transparent px-3 py-2 text-sm text-[#ccc] outline-none focus:border-white"
+			class="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-sm text-slate-300 outline-none focus:border-blue-500"
 		>
 			<option value="">Todos los tipos</option>
 			<option value="cron">Cron jobs</option>
@@ -113,18 +113,18 @@
 		<div class="space-y-3">
 			{#each result.items as report (report.id)}
 				{@const isExpanded = expandedId === report.id}
-				<div class="border border-[#1a1a1a] bg-[#090909] overflow-hidden">
+				<div class="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
 					<!-- Header row -->
 					<button
 						onclick={() => { expandedId = isExpanded ? null : report.id; }}
 						class="flex w-full items-center gap-3 px-4 py-3 text-left
-							hover:bg-[#111] transition-colors"
+							hover:bg-slate-800/40 transition-colors"
 					>
 						<!-- Status dot -->
 						<div class="h-2 w-2 shrink-0 rounded-full {statusDot[report.status] ?? 'bg-slate-500'}"></div>
 
 						<!-- Title -->
-						<p class="flex-1 min-w-0 truncate text-sm font-medium text-white">
+						<p class="flex-1 min-w-0 truncate text-sm font-medium text-slate-200">
 							{report.title}
 						</p>
 
@@ -133,11 +133,11 @@
 							<Badge variant={typeBadge[report.type] ?? 'slate'} size="sm">
 								{typeLabel[report.type] ?? report.type}
 							</Badge>
-							<span class="text-xs text-[#555]">
+							<span class="text-xs text-slate-500">
 								{formatDate(report.created)}
 							</span>
 							<!-- Expand indicator -->
-							<span class="text-xs text-[#444] ml-1">
+							<span class="text-xs text-slate-600 ml-1">
 								{isExpanded ? '▲' : '▼'}
 							</span>
 						</div>
@@ -145,12 +145,12 @@
 
 					<!-- Expandable content -->
 					{#if isExpanded && report.content}
-						<div class="border-t border-[#1a1a1a] px-4 py-4">
-							<p class="text-sm text-[#ccc] leading-relaxed whitespace-pre-wrap">
+						<div class="border-t border-slate-800 px-4 py-4">
+							<p class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
 								{report.content}
 							</p>
 							{#if report.session_id}
-								<p class="mt-3 font-mono text-xs text-[#444]">
+								<p class="mt-3 font-mono text-xs text-slate-600">
 									session: {report.session_id}
 								</p>
 							{/if}
@@ -161,14 +161,14 @@
 
 			{#if result.totalPages > 1}
 				<div class="flex items-center justify-between pt-2">
-					<span class="text-xs text-[#555]">Página {result.page} de {result.totalPages}</span>
+					<span class="text-xs text-slate-500">Página {result.page} de {result.totalPages}</span>
 					<div class="flex gap-2">
 						<button onclick={() => { page = page - 1; }} disabled={page <= 1}
-							class="rounded px-3 py-1.5 text-xs text-[#555] hover:bg-[#111] disabled:opacity-40">
+							class="rounded px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-40">
 							← Anterior
 						</button>
 						<button onclick={() => { page = page + 1; }} disabled={page >= result.totalPages}
-							class="rounded px-3 py-1.5 text-xs text-[#555] hover:bg-[#111] disabled:opacity-40">
+							class="rounded px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 disabled:opacity-40">
 							Siguiente →
 						</button>
 					</div>
