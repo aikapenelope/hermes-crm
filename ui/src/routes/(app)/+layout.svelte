@@ -31,6 +31,12 @@
 				{ href: '/products', label: 'PRODUCTOS' },
 			],
 		},
+		{
+			label: 'CUENTA',
+			items: [
+				{ href: '/settings', label: 'AJUSTES' },
+			],
+		},
 	];
 
 	function isActive(href: string) {
