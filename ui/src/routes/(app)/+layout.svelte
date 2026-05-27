@@ -5,32 +5,46 @@
 	import { fade } from 'svelte/transition';
 	import pb from '$lib/pb';
 	import { currentUser } from '$lib/stores';
+	import { GlobalSearch } from '$lib/ui';
+	import {
+		LayoutDashboard, Users, DollarSign, CheckSquare, Calendar,
+	} from 'lucide-svelte';
+
+	// ── Bottom nav items (mobile PWA) ────────────────────────────────────────
+	const bottomNav = [
+		{ href: '/',         label: 'INICIO',    Icon: LayoutDashboard },
+		{ href: '/contacts', label: 'CONTACTOS', Icon: Users           },
+		{ href: '/deals',    label: 'NEGOCIOS',  Icon: DollarSign      },
+		{ href: '/tasks',    label: 'TAREAS',    Icon: CheckSquare     },
+		{ href: '/calendar', label: 'AGENDA',    Icon: Calendar        },
+	] as const;
 
 	let { children } = $props();
 
-	// ── Mobile sidebar ──────────────────────────────────────────────────────
+	// ── Mobile sidebar ────────────────────────────────────────────────────────
 	let sidebarOpen = $state(false);
 	afterNavigate(() => { sidebarOpen = false; });
 
-	// ── Nav groups ──────────────────────────────────────────────────────────
+	// ── Nav groups (desktop sidebar) ──────────────────────────────────────────
 	const navGroups = [
 		{
 			label: 'MAIN // OPS',
 			items: [
-				{ href: '/',           label: 'DASHBOARD'  },
-				{ href: '/contacts',   label: 'CONTACTOS'  },
-				{ href: '/companies',  label: 'EMPRESAS'   },
-				{ href: '/deals',      label: 'NEGOCIOS'   },
-				{ href: '/calendar',   label: 'CALENDARIO' },
+				{ href: '/',          label: 'DASHBOARD'  },
+				{ href: '/contacts',  label: 'CONTACTOS'  },
+				{ href: '/companies', label: 'EMPRESAS'   },
+				{ href: '/deals',     label: 'NEGOCIOS'   },
+				{ href: '/calendar',  label: 'CALENDARIO' },
 			],
 		},
 		{
 			label: 'ANALYTICS // MGMT',
 			items: [
-				{ href: '/tasks',    label: 'TAREAS'    },
-				{ href: '/goals',    label: 'METAS'     },
-				{ href: '/segments', label: 'SEGMENTOS' },
-				{ href: '/products', label: 'PRODUCTOS' },
+				{ href: '/tasks',          label: 'TAREAS'    },
+				{ href: '/goals',          label: 'METAS'     },
+				{ href: '/deals/forecast', label: 'FORECAST'  },
+				{ href: '/segments',       label: 'SEGMENTOS' },
+				{ href: '/products',       label: 'PRODUCTOS' },
 			],
 		},
 		{
@@ -58,10 +72,9 @@
 		await goto('/login');
 	}
 
-	// ── Live clock ──────────────────────────────────────────────────────────
+	// ── Live clock ────────────────────────────────────────────────────────────
 	let timeStr  = $state('');
 	let tzOffset = $state('');
-
 	function tick() {
 		const now = new Date();
 		timeStr = now.toLocaleTimeString('es', { hour12: false });
@@ -72,10 +85,9 @@
 	const clockInterval = setInterval(tick, 1000);
 	onDestroy(() => clearInterval(clockInterval));
 
-	// ── Footer stats ────────────────────────────────────────────────────────
+	// ── Footer stats ──────────────────────────────────────────────────────────
 	let pipelineTotal = $state(0);
 	let tasksDueToday = $state(0);
-
 	onMount(async () => {
 		const today = new Date().toISOString().slice(0, 10);
 		try {
@@ -95,7 +107,7 @@
 		} catch { /* non-critical */ }
 	});
 
-	// ── User info ───────────────────────────────────────────────────────────
+	// ── User info ─────────────────────────────────────────────────────────────
 	const userInitials = $derived(() => {
 		const raw = String($currentUser?.get?.('name') ?? $currentUser?.email ?? 'AG');
 		return raw.split(/[\s@]+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
@@ -111,7 +123,7 @@
 <div class="flex h-screen overflow-hidden bg-[#070707] text-[#888] selection:bg-[#333]"
      style="font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace; font-size: 11px; letter-spacing: 0.08em;">
 
-	<!-- ── Mobile overlay ──────────────────────────────────────────────────── -->
+	<!-- ── Mobile overlay ─────────────────────────────────────────────────── -->
 	{#if sidebarOpen}
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 		<div
@@ -123,7 +135,7 @@
 	{/if}
 
 	<!-- ════════════════════════════════════════════════════════════════════ -->
-	<!-- SIDEBAR                                                              -->
+	<!-- SIDEBAR — desktop always visible, mobile slide-in overlay           -->
 	<!-- ════════════════════════════════════════════════════════════════════ -->
 	<aside
 		class="fixed inset-y-0 left-0 z-40 flex w-64 flex-shrink-0 flex-col justify-between
@@ -153,7 +165,6 @@
 							{#each group.items as item}
 								<li class="relative">
 									{#if isActive(item.href)}
-										<!-- Rainbow top line on active item -->
 										<div class="absolute top-0 left-0 right-0 h-[1px]"
 											style="background: linear-gradient(to right, #ff3333, #ffaa00, #00ffaa, #00aaff, #aa00ff);">
 										</div>
@@ -192,17 +203,17 @@
 	<!-- ════════════════════════════════════════════════════════════════════ -->
 	<main class="flex flex-1 flex-col overflow-hidden">
 
-		<!-- ── Topbar ──────────────────────────────────────────────────────── -->
+		<!-- ── Topbar ─────────────────────────────────────────────────────── -->
 		<header class="flex h-16 flex-shrink-0 items-center justify-between
 			border-b border-[#1a1a1a] px-6 lg:px-8">
 
 			<!-- Left: hamburger (mobile) + brand + status -->
 			<div class="flex items-center gap-4 lg:gap-6">
-				<!-- Hamburger — mobile only -->
+				<!-- Hamburger — mobile only (bottom nav handles main navigation) -->
 				<button
 					onclick={() => { sidebarOpen = true; }}
 					class="text-[#555] hover:text-white transition-colors lg:hidden"
-					aria-label="Abrir menú"
+					aria-label="Abrir menú completo"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -221,20 +232,14 @@
 				</div>
 			</div>
 
-			<!-- Center: search -->
-			<div class="hidden flex-1 px-8 lg:block" style="max-width: 480px;">
-				<input
-					type="text"
-					placeholder="BUSCAR [CONTACTOS / NEGOCIOS / TAREAS]"
-					class="w-full border border-[#222] bg-transparent px-4 py-2 text-[10px]
-						tracking-widest text-[#888] placeholder-[#444] uppercase
-						focus:border-[#444] focus:outline-none"
-				/>
+			<!-- Center: global search -->
+			<div class="hidden flex-1 px-8 lg:flex" style="max-width: 480px;">
+				<GlobalSearch />
 			</div>
 
 			<!-- Right: user info -->
 			<div class="flex items-center gap-3">
-				<div class="h-1.5 w-1.5 rounded-full bg-blue-500 hidden sm:block"></div>
+				<div class="h-1.5 w-1.5 bg-white hidden sm:block"></div>
 				<div class="hidden text-right leading-tight sm:block">
 					<div class="text-white tracking-widest uppercase" style="font-size: 12px; font-family: system-ui, sans-serif; font-weight: 600;">
 						{userName.split('@')[0].slice(0, 16)}
@@ -248,8 +253,10 @@
 			</div>
 		</header>
 
-		<!-- ── Scrollable content ───────────────────────────────────────────── -->
-		<div class="flex-1 overflow-y-auto" style="padding-bottom: var(--footer-h);">
+		<!-- ── Scrollable content ─────────────────────────────────────────── -->
+		<!-- Mobile: pad bottom for the bottom nav bar + safe area -->
+		<!-- Desktop: pad bottom for the footer status bar -->
+		<div class="flex-1 overflow-y-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-[var(--footer-h)]">
 			{@render children()}
 		</div>
 	</main>
@@ -257,10 +264,41 @@
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-<!-- FOOTER — fixed status bar                                               -->
+<!-- BOTTOM NAV — mobile PWA tab bar (hidden on desktop)                     -->
+<!-- Shows 5 main sections with icons. Active item gets rainbow top line.    -->
+<!-- Safe area inset handles iOS home indicator space.                       -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<nav
+	class="fixed bottom-0 left-0 right-0 z-30 flex lg:hidden
+		border-t border-[#1a1a1a] bg-[#070707]"
+	style="padding-bottom: env(safe-area-inset-bottom);"
+>
+	{#each bottomNav as item}
+		{@const active = item.href === '/' ? $page.url.pathname === '/' : $page.url.pathname.startsWith(item.href)}
+		{@const NavIcon = item.Icon}
+		<a
+			href={item.href}
+			class="relative flex flex-1 flex-col items-center justify-center gap-1 py-2.5
+				text-[7px] tracking-widest uppercase transition-colors
+				{active ? 'text-white' : 'text-[#444] hover:text-[#888]'}"
+		>
+			<!-- Rainbow top line on active item -->
+			{#if active}
+				<div class="absolute top-0 left-2 right-2 h-[1px]"
+					style="background:linear-gradient(to right,#ff3333,#ffaa00,#00ffaa,#00aaff,#aa00ff);">
+				</div>
+			{/if}
+			<NavIcon class="h-5 w-5" />
+			<span>{item.label}</span>
+		</a>
+	{/each}
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER — desktop status bar only (hidden on mobile, replaced by bottom nav) -->
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <footer
-	class="fixed bottom-0 right-0 z-20 flex h-12 items-center justify-between
+	class="fixed bottom-0 right-0 z-20 hidden lg:flex h-12 items-center justify-between
 		border-t border-[#1a1a1a] bg-[#070707] px-6 lg:px-8
 		left-0 lg:left-64"
 >
@@ -286,7 +324,7 @@
 			{tzOffset} // {timeStr}
 		</div>
 		<div class="flex gap-0.5">
-			<div class="h-3 w-1 bg-blue-500"></div>
+			<div class="h-3 w-1 bg-white"></div>
 			<div class="h-3 w-1 bg-yellow-500"></div>
 			<div class="h-3 w-1 bg-white"></div>
 		</div>

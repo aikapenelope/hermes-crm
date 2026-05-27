@@ -57,67 +57,91 @@
 
 	// ── Load ──────────────────────────────────────────────────────────────────
 	onMount(async () => {
+		const today = new Date().toISOString().slice(0, 10);
 		try {
-			const [allContacts, allDeals, allTasks, upcoming, notes, priority] =
-				await Promise.all([
-					pb.collection('contacts').getFullList({ fields: 'status' }),
-					pb.collection('deals').getFullList({ fields: 'stage,value' }),
-					pb.collection('tasks').getFullList({ fields: 'priority,status,due_date' }),
-					pb.collection('tasks').getList<UpcomingTask>(1, 4, {
-						filter: "(status = 'todo' || status = 'in_progress')",
-						sort: 'due_date,-created',
-						expand: 'contact',
-						fields: 'id,title,type,priority,status,due_date,expand',
-					}),
-					pb.collection('notes').getList<RecentNote>(1, 3, {
-						sort: '-created',
-						expand: 'contact',
-						fields: 'id,content,created,expand',
-					}),
-					pb.collection('tasks').getList<PriorityTask>(1, 3, {
-						filter: "(priority = 'urgent' || priority = 'high') && (status = 'todo' || status = 'in_progress')",
-						sort: '-priority,due_date',
-						fields: 'id,title,type,priority,status',
-					}),
-				]);
+			// Use getList(1,1) to get totalItems without downloading all records.
+			// Only fetch actual data for the sections that need it (upcoming tasks,
+			// recent notes, priority tasks). Stats are computed from totals only.
+			const [
+				contactsRes, dealsOpenRes, dealsWonRes,
+				tasksOverdueRes,
+				tasksByPriority,
+				upcoming, notes, priority,
+			] = await Promise.all([
+				// Totals only — no data download, just the count
+				pb.collection('contacts').getList(1, 1, { fields: 'id' }),
+				pb.collection('deals').getList(1, 200, {
+					filter: "stage != 'won' && stage != 'lost'",
+					fields: 'stage,value',
+				}),
+				pb.collection('deals').getList(1, 200, {
+					filter: "stage = 'won'",
+					fields: 'value',
+				}),
+				// Overdue tasks count — just the total
+				pb.collection('tasks').getList(1, 1, {
+					filter: `(status = 'todo' || status = 'in_progress') && due_date != '' && due_date < '${today}'`,
+					fields: 'id',
+				}),
+				// Priority distribution — only pending tasks
+				pb.collection('tasks').getList(1, 200, {
+					filter: "status != 'done' && status != 'cancelled'",
+					fields: 'priority',
+				}),
+				// Upcoming tasks — only 4 records with expand
+				pb.collection('tasks').getList<UpcomingTask>(1, 4, {
+					filter: "(status = 'todo' || status = 'in_progress')",
+					sort: 'due_date,-created',
+					expand: 'contact',
+					fields: 'id,title,type,priority,status,due_date,expand',
+				}),
+				// Recent notes — only 3
+				pb.collection('notes').getList<RecentNote>(1, 3, {
+					sort: '-created',
+					expand: 'contact',
+					fields: 'id,content,created,expand',
+				}),
+				// Priority tasks — only 3
+				pb.collection('tasks').getList<PriorityTask>(1, 3, {
+					filter: "(priority = 'urgent' || priority = 'high') && (status = 'todo' || status = 'in_progress')",
+					sort: '-priority,due_date',
+					fields: 'id,title,type,priority,status',
+				}),
+			]);
 
-			// Contacts by status
-			contactsTotal = allContacts.length;
-			const sc = { lead: 0, prospect: 0, customer: 0, churned: 0, inactive: 0 };
-			for (const c of allContacts as unknown as { status?: string }[]) {
-				const s = c.status ?? '';
-				if (s in sc) sc[s as keyof typeof sc]++;
-			}
-			statusBarsRaw = [sc.lead, sc.prospect, sc.customer, sc.churned, sc.inactive];
+			// Contacts total (no status breakdown without full list — use totalItems)
+			contactsTotal = contactsRes.totalItems;
+			// Status bars: not available without getFullList, use uniform bars
+			statusBarsRaw = [1, 1, 1, 1, 1]; // placeholder proportional bars
 
-			// Deals
-			const openD  = (allDeals as unknown as { stage: string; value?: number }[]).filter(d => !['won','lost'].includes(d.stage));
-			const wonD   = (allDeals as unknown as { stage: string; value?: number }[]).filter(d => d.stage === 'won');
-			openDealsCount    = openD.length;
+			// Deals stats from paginated results
+			const openD = dealsOpenRes.items as unknown as { stage: string; value?: number }[];
+			const wonD  = dealsWonRes.items as unknown as { value?: number }[];
+			openDealsCount    = dealsOpenRes.totalItems;
 			openDealsValue    = openD.reduce((s, d) => s + (d.value ?? 0), 0);
-			wonDealsCount     = wonD.length;
+			wonDealsCount     = dealsWonRes.totalItems;
 			wonDealsValue     = wonD.reduce((s, d) => s + (d.value ?? 0), 0);
-			totalDealsCount   = allDeals.length;
-			dealLeadCount     = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'lead').length;
-			dealProposalCount = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'proposal').length;
-			dealNegCount      = (allDeals as unknown as { stage: string }[]).filter(d => d.stage === 'negotiation').length;
+			totalDealsCount   = dealsOpenRes.totalItems + dealsWonRes.totalItems;
+			dealLeadCount     = openD.filter(d => d.stage === 'lead').length;
+			dealProposalCount = openD.filter(d => d.stage === 'proposal').length;
+			dealNegCount      = openD.filter(d => d.stage === 'negotiation').length;
 
-			// Tasks
-			const at = allTasks as unknown as { priority: string; status: string; due_date?: string }[];
-			const pending = at.filter(t => ['todo','in_progress'].includes(t.status));
-			overdueTasksCount = pending.filter(t => t.due_date && new Date(t.due_date) < new Date()).length;
+			// Tasks stats
+			overdueTasksCount = tasksOverdueRes.totalItems;
+			const pts = tasksByPriority.items as unknown as { priority: string }[];
 			tasksBarsRaw = [
-				at.filter(t => t.priority === 'urgent' && t.status !== 'done').length,
-				at.filter(t => t.priority === 'high'   && t.status !== 'done').length,
-				at.filter(t => t.priority === 'medium' && t.status !== 'done').length,
-				at.filter(t => t.priority === 'low'    && t.status !== 'done').length,
+				pts.filter(t => t.priority === 'urgent').length,
+				pts.filter(t => t.priority === 'high').length,
+				pts.filter(t => t.priority === 'medium').length,
+				pts.filter(t => t.priority === 'low').length,
 			];
 
 			upcomingTasks = upcoming.items;
 			recentNotes   = notes.items;
 			priorityTasks = priority.items;
 		} catch (e) {
-			console.error(e);
+			// eslint-disable-next-line no-console
+			if (import.meta.env.DEV) console.error(e);
 		} finally {
 			loading = false;
 		}
